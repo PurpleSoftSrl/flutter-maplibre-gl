@@ -355,6 +355,27 @@ final class MapLibreMapController
     }
   }
 
+  /**
+   * @return true if {@code result} was completed with an error (caller should break the switch).
+   */
+  private boolean rejectStyleNotReady(MethodChannel.Result result) {
+    if (style == null) {
+      result.error(
+          "STYLE_NOT_READY",
+          "Style is null. Add layers after the map style has loaded.",
+          null);
+      return true;
+    }
+    if (!style.isFullyLoaded()) {
+      result.error(
+          "STYLE_NOT_READY",
+          "Style is not fully loaded. Add layers from onStyleLoadedCallback.",
+          null);
+      return true;
+    }
+    return false;
+  }
+
   String getLastLayerOnStyle(Style style) {
     if (style == null) return null;
     if (!style.isFullyLoaded()) {
@@ -1415,46 +1436,62 @@ final class MapLibreMapController
         }
       case "hillshadeLayer#add":
         {
-          final String sourceId = call.argument("sourceId");
-          final String layerId = call.argument("layerId");
-          final String belowLayerId = call.argument("belowLayerId");
-          final Double minzoom = call.argument("minzoom");
-          final Double maxzoom = call.argument("maxzoom");
-          final PropertyValue[] properties =
-              LayerPropertyConverter.interpretHillshadeLayerProperties(call.argument("properties"));
-          addHillshadeLayer(
-              layerId,
-              sourceId,
-              minzoom != null ? minzoom.floatValue() : null,
-              maxzoom != null ? maxzoom.floatValue() : null,
-              belowLayerId,
-              properties,
-              null);
-          updateLocationComponentLayer();
+          if (rejectStyleNotReady(result)) {
+            break;
+          }
+          try {
+            final String sourceId = call.argument("sourceId");
+            final String layerId = call.argument("layerId");
+            final String belowLayerId = call.argument("belowLayerId");
+            final Double minzoom = call.argument("minzoom");
+            final Double maxzoom = call.argument("maxzoom");
+            final PropertyValue[] properties =
+                LayerPropertyConverter.interpretHillshadeLayerProperties(call.argument("properties"));
+            addHillshadeLayer(
+                layerId,
+                sourceId,
+                minzoom != null ? minzoom.floatValue() : null,
+                maxzoom != null ? maxzoom.floatValue() : null,
+                belowLayerId,
+                properties,
+                null);
+            updateLocationComponentLayer();
 
-          result.success(null);
+            result.success(null);
+          } catch (RuntimeException e) {
+            Log.e(TAG, "hillshadeLayer#add", e);
+            result.error("HILLSHADE_LAYER_ERROR", e.getMessage(), null);
+          }
           break;
         }
       case "heatmapLayer#add":
         {
-          final String sourceId = call.argument("sourceId");
-          final String layerId = call.argument("layerId");
-          final String belowLayerId = call.argument("belowLayerId");
-          final Double minzoom = call.argument("minzoom");
-          final Double maxzoom = call.argument("maxzoom");
-          final PropertyValue[] properties =
-              LayerPropertyConverter.interpretHeatmapLayerProperties(call.argument("properties"));
-          addHeatmapLayer(
-              layerId,
-              sourceId,
-              minzoom != null ? minzoom.floatValue() : null,
-              maxzoom != null ? maxzoom.floatValue() : null,
-              belowLayerId,
-              properties,
-              null);
-          updateLocationComponentLayer();
+          if (rejectStyleNotReady(result)) {
+            break;
+          }
+          try {
+            final String sourceId = call.argument("sourceId");
+            final String layerId = call.argument("layerId");
+            final String belowLayerId = call.argument("belowLayerId");
+            final Double minzoom = call.argument("minzoom");
+            final Double maxzoom = call.argument("maxzoom");
+            final PropertyValue[] properties =
+                LayerPropertyConverter.interpretHeatmapLayerProperties(call.argument("properties"));
+            addHeatmapLayer(
+                layerId,
+                sourceId,
+                minzoom != null ? minzoom.floatValue() : null,
+                maxzoom != null ? maxzoom.floatValue() : null,
+                belowLayerId,
+                properties,
+                null);
+            updateLocationComponentLayer();
 
-          result.success(null);
+            result.success(null);
+          } catch (RuntimeException e) {
+            Log.e(TAG, "heatmapLayer#add", e);
+            result.error("HEATMAP_LAYER_ERROR", e.getMessage(), null);
+          }
           break;
         }
       case "locationComponent#getLastLocation":

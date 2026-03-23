@@ -19,6 +19,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Offline region helpers. A {@code std::regex_error} when a download finishes with some styles
+ * (e.g. glyph URLs) comes from maplibre-native, not this plugin — see issue #296 upstream.
+ */
 abstract class OfflineManagerUtils {
   private static final String TAG = "OfflineManagerUtils";
 
