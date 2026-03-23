@@ -317,7 +317,7 @@ final class MapLibreMapController
                       .build();
 
       locationComponent.activateLocationComponent(options);
-      locationComponent.setLocationComponentEnabled(true);
+      safeSetLocationComponentEnabled(true);
       locationComponent.setMaxAnimationFps(30);
       updateMyLocationTrackingMode();
       updateMyLocationRenderMode();
@@ -336,6 +336,22 @@ final class MapLibreMapController
   private void clearLocationComponentLayer() {
     if (locationComponent != null) {
       locationComponent.applyStyle(buildLocationComponentOptions(null));
+    }
+  }
+
+  /**
+   * MapLibre throws {@link IllegalStateException} when the style is loading or has been replaced
+   * but the location layer still toggles visibility (e.g. dispose during engine restart).
+   * See <a href="https://github.com/maplibre/flutter-maplibre-gl/issues/477">#477</a>.
+   */
+  private void safeSetLocationComponentEnabled(boolean enabled) {
+    if (locationComponent == null) {
+      return;
+    }
+    try {
+      locationComponent.setLocationComponentEnabled(enabled);
+    } catch (IllegalStateException e) {
+      Log.w(TAG, "setLocationComponentEnabled(" + enabled + ") skipped: style not ready", e);
     }
   }
 
@@ -2034,9 +2050,7 @@ final class MapLibreMapController
       return;
     }
 
-    if (locationComponent != null) {
-      locationComponent.setLocationComponentEnabled(false);
-    }
+    safeSetLocationComponentEnabled(false);
     stopListeningForLocationUpdates();
 
     mapViewContainer.removeView(mapView);
@@ -2314,9 +2328,7 @@ final class MapLibreMapController
       stopListeningForLocationUpdates();
     }
 
-    if (locationComponent != null) {
-      locationComponent.setLocationComponentEnabled(myLocationEnabled);
-    }
+    safeSetLocationComponentEnabled(myLocationEnabled);
   }
 
   private void startListeningForLocationUpdates() {
