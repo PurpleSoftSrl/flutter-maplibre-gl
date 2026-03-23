@@ -1,6 +1,25 @@
 import MapLibre
 
 class Convert {
+    /// Flutter's standard message codec sends Dart `double` as Swift `Double`, not `CGFloat`.
+    /// Direct `as? CGFloat` on channel values fails and breaks camera padding, scroll, tilt, etc.
+    class func CGFloatFromChannel(_ value: Any?) -> CGFloat? {
+        switch value {
+        case let v as CGFloat:
+            return v
+        case let v as Double:
+            return CGFloat(v)
+        case let v as Float:
+            return CGFloat(v)
+        case let v as Int:
+            return CGFloat(v)
+        case let v as NSNumber:
+            return CGFloat(truncating: v)
+        default:
+            return nil
+        }
+    }
+
     class func interpretMapLibreMapOptions(options: Any?, delegate: MapLibreMapOptionsSink) {
         guard let options = options as? [String: Any] else { return }
         if let cameraTargetBounds = options["cameraTargetBounds"] as? [Any?] {
@@ -95,12 +114,13 @@ class Convert {
         if(methodName != "newLatLngBounds") {
             return nil
         }
-        
-        guard let paddingLeft = cameraUpdate[2] as? CGFloat else { return nil }
-        guard let paddingTop = cameraUpdate[3] as? CGFloat else { return nil }
-        guard let paddingRight = cameraUpdate[4] as? CGFloat else { return nil }
-        guard let paddingBottom = cameraUpdate[5] as? CGFloat else { return nil }
-        
+        guard cameraUpdate.count >= 6 else { return nil }
+
+        guard let paddingLeft = CGFloatFromChannel(cameraUpdate[2]) else { return nil }
+        guard let paddingTop = CGFloatFromChannel(cameraUpdate[3]) else { return nil }
+        guard let paddingRight = CGFloatFromChannel(cameraUpdate[4]) else { return nil }
+        guard let paddingBottom = CGFloatFromChannel(cameraUpdate[5]) else { return nil }
+
         return UIEdgeInsets(top: paddingTop, left: paddingLeft, bottom: paddingBottom, right: paddingRight)
     }
 
@@ -140,8 +160,8 @@ class Convert {
                 heading: camera.heading
             )
         case "scrollBy":
-            guard let x = cameraUpdate[1] as? CGFloat else { return nil }
-            guard let y = cameraUpdate[2] as? CGFloat else { return nil }
+            guard let x = CGFloatFromChannel(cameraUpdate[1]) else { return nil }
+            guard let y = CGFloatFromChannel(cameraUpdate[2]) else { return nil }
             let camera = mapView.camera
             let mapPoint = mapView.convert(camera.centerCoordinate, toPointTo: mapView)
             let movedPoint = CGPoint(x: mapPoint.x + x, y: mapPoint.y + y)
@@ -156,9 +176,8 @@ class Convert {
             if cameraUpdate.count == 2 {
                 return camera
             } else {
-                guard let point = cameraUpdate[2] as? [CGFloat],
-                      point.count == 2 else { return nil }
-                let movedPoint = CGPoint(x: point[0], y: point[1])
+                guard let point = cameraUpdate[2] as? [Double], point.count == 2 else { return nil }
+                let movedPoint = CGPoint(x: CGFloat(point[0]), y: CGFloat(point[1]))
                 camera.centerCoordinate = mapView.convert(movedPoint, toCoordinateFrom: mapView)
                 return camera
             }
@@ -186,7 +205,7 @@ class Convert {
             camera.heading = bearing
             return camera
         case "tiltTo":
-            guard let tilt = cameraUpdate[1] as? CGFloat else { return nil }
+            guard let tilt = CGFloatFromChannel(cameraUpdate[1]) else { return nil }
             let camera = mapView.camera
             camera.pitch = tilt
             return camera
