@@ -42,10 +42,16 @@ class OfflineRegionDefinition {
     );
   }
 
+  /// iOS/Android platform channels may pass [int] for whole coordinates; [LatLng] expects [double].
+  static double _coordToDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.parse(value.toString());
+  }
+
   static LatLngBounds _latLngBoundsFromList(List<dynamic> json) {
     return LatLngBounds(
-      southwest: LatLng(json[0][0], json[0][1]),
-      northeast: LatLng(json[1][0], json[1][1]),
+      southwest: LatLng(_coordToDouble(json[0][0]), _coordToDouble(json[0][1])),
+      northeast: LatLng(_coordToDouble(json[1][0]), _coordToDouble(json[1][1])),
     );
   }
 }
