@@ -27,7 +27,7 @@ dependencies:
   web: ^1.1.1
 
 dev_dependencies:
-  very_good_analysis: ^10.0.0
+  very_good_analysis: ^11.0.0
 
 platforms:
   web:
