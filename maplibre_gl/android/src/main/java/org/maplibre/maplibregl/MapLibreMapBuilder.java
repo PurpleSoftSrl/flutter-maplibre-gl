@@ -7,6 +7,7 @@ package org.maplibre.maplibregl;
 import android.content.Context;
 import android.view.Gravity;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import org.maplibre.android.camera.CameraPosition;
 import org.maplibre.android.geometry.LatLngBounds;
 import org.maplibre.android.location.engine.LocationEngineRequest;
@@ -16,15 +17,23 @@ import io.flutter.plugin.common.BinaryMessenger;
 class MapLibreMapBuilder implements MapLibreMapOptionsSink {
   public final String TAG = getClass().getSimpleName();
   private final MapLibreMapOptions options =
-      new MapLibreMapOptions().attributionEnabled(true).logoEnabled(false).textureMode(true);
+      new MapLibreMapOptions().attributionEnabled(true).logoEnabled(false).textureMode(false);
   private boolean trackCameraPosition = false;
   private boolean myLocationEnabled = false;
   private boolean dragEnabled = true;
+  private boolean featureTapsTriggersMapClick = false;
+  private boolean symbolPlacementTransitionsEnabled = true;
   private int myLocationTrackingMode = 0;
   private int myLocationRenderMode = 0;
+  private LocationPuckStyle myLocationStyle = LocationPuckStyle.DEFAULT;
   private String styleString = "";
   private LatLngBounds bounds = null;
   private LocationEngineRequest locationEngineRequest = null;
+  private String locationSourceToken = "platform";
+  private boolean translucentRequested = false;
+  private boolean textureViewRequested = false;
+  private Integer attributionButtonColor = null;
+  private Integer panInertia = null;
 
   MapLibreMapController build(
       int id,
@@ -34,12 +43,23 @@ class MapLibreMapBuilder implements MapLibreMapOptionsSink {
 
     final MapLibreMapController controller =
         new MapLibreMapController(
-            id, context, messenger, lifecycleProvider, options, styleString, dragEnabled);
+            id, 
+            context, 
+            messenger, 
+            lifecycleProvider, 
+            options, 
+            styleString, 
+            dragEnabled, 
+            featureTapsTriggersMapClick
+        );
     controller.init();
     controller.setMyLocationEnabled(myLocationEnabled);
     controller.setMyLocationTrackingMode(myLocationTrackingMode);
     controller.setMyLocationRenderMode(myLocationRenderMode);
+    controller.setMyLocationStyle(myLocationStyle);
     controller.setTrackCameraPosition(trackCameraPosition);
+    controller.setLocationSource(locationSourceToken);
+    controller.setSymbolPlacementTransitionsEnabled(symbolPlacementTransitionsEnabled);
 
     if (null != bounds) {
       controller.setCameraTargetBounds(bounds);
@@ -47,6 +67,14 @@ class MapLibreMapBuilder implements MapLibreMapOptionsSink {
 
     if(null != locationEngineRequest ){
       controller.setLocationEngineProperties(locationEngineRequest);
+    }
+
+    if (null != attributionButtonColor) {
+      controller.setAttributionButtonColor(attributionButtonColor);
+    }
+
+    if (null != panInertia) {
+      controller.setPanInertia(panInertia);
     }
 
     return controller;
@@ -62,7 +90,7 @@ class MapLibreMapBuilder implements MapLibreMapOptionsSink {
   }
 
   @Override
-  public void setCameraTargetBounds(@NonNull LatLngBounds bounds) {
+  public void setCameraTargetBounds(@Nullable LatLngBounds bounds) {
     this.bounds = bounds;
   }
 
@@ -107,6 +135,18 @@ class MapLibreMapBuilder implements MapLibreMapOptionsSink {
   }
 
   @Override
+  public void setDoubleClickZoomEnabled(boolean doubleClickZoomEnabled) {
+    options.doubleTapGesturesEnabled(doubleClickZoomEnabled);
+  }
+
+  @Override
+  public void setPanInertia(int panInertia) {
+    // MapLibreMapOptions has no fling settings: they live on UiSettings, which
+    // only exists once the map is ready, so forward to the controller in build().
+    this.panInertia = panInertia;
+  }
+
+  @Override
   public void setMyLocationEnabled(boolean myLocationEnabled) {
     this.myLocationEnabled = myLocationEnabled;
   }
@@ -119,6 +159,11 @@ class MapLibreMapBuilder implements MapLibreMapOptionsSink {
   @Override
   public void setMyLocationRenderMode(int myLocationRenderMode) {
     this.myLocationRenderMode = myLocationRenderMode;
+  }
+
+  @Override
+  public void setMyLocationStyle(@NonNull LocationPuckStyle style) {
+    this.myLocationStyle = style;
   }
 
   @Override
@@ -145,13 +190,23 @@ class MapLibreMapBuilder implements MapLibreMapOptionsSink {
   }
 
   public void setLogoViewMargins(int x, int y) {
-    options.logoMargins(
-        new int[] {
-          (int) x, // left
-          (int) 0, // top
-          (int) 0, // right
-          (int) y, // bottom
-        });
+    switch (options.getLogoGravity()) {
+      case Gravity.TOP | Gravity.START:
+        options.logoMargins(new int[] {(int) x, (int) y, 0, 0});
+        break;
+      case Gravity.TOP | Gravity.END:
+        options.logoMargins(new int[] {0, (int) y, (int) x, 0});
+        break;
+        // If the application code has not specified gravity, assume the platform
+        // default for the logo which is bottom left
+      default:
+      case Gravity.BOTTOM | Gravity.START:
+        options.logoMargins(new int[] {(int) x, 0, 0, (int) y});
+        break;
+      case Gravity.BOTTOM | Gravity.END:
+        options.logoMargins(new int[] {0, 0, (int) x, (int) y});
+        break;
+    }
   }
 
   @Override
@@ -194,6 +249,11 @@ class MapLibreMapBuilder implements MapLibreMapOptionsSink {
   }
 
   @Override
+  public void setAttributionEnabled(boolean attributionEnabled) {
+    options.attributionEnabled(attributionEnabled);
+  }
+
+  @Override
   public void setAttributionButtonGravity(int gravity) {
     switch (gravity) {
       case 0:
@@ -232,13 +292,36 @@ class MapLibreMapBuilder implements MapLibreMapOptionsSink {
     }
   }
 
+  @Override
+  public void setAttributionButtonColor(int color) {
+    // The tint is applied through UiSettings, which only exists once the map
+    // is ready, so stash it and forward to the controller in build().
+    this.attributionButtonColor = color;
+  }
+
   public void setDragEnabled(boolean enabled) {
     this.dragEnabled = enabled;
+  }
+
+  public void setFeatureTapsTriggersMapClick(boolean triggers) {
+    this.featureTapsTriggersMapClick = triggers;
+  }
+
+  @Override
+  public void setSymbolPlacementTransitionsEnabled(boolean enabled) {
+    this.symbolPlacementTransitionsEnabled = enabled;
   }
 
   @Override
   public void setLocationEngineProperties(@NonNull LocationEngineRequest locationEngineRequest) {
     this.locationEngineRequest = locationEngineRequest;
+  }
+
+  @Override
+  public void setLocationSource(@NonNull String token) {
+    // Store the raw token here and forward it to the controller in build();
+    // the token -> behavior mapping is resolved on the controller (native side).
+    this.locationSourceToken = token;
   }
 
   @Override
@@ -248,6 +331,19 @@ class MapLibreMapBuilder implements MapLibreMapOptionsSink {
 
   @Override
   public void setTranslucentTextureSurface(boolean translucentTextureSurface) {
+    this.translucentRequested = translucentTextureSurface;
     options.translucentTextureSurface(translucentTextureSurface);
+    // textureMode must be on if EITHER a translucent surface is required OR the app asked for
+    // a TextureView. Both are correctness requirements, not knobs.
+    options.textureMode(translucentRequested || textureViewRequested);
+  }
+
+  /**
+   * Whether the map draws into a TextureView rather than a SurfaceView. Set from the creation
+   * params, not the map options.
+   */
+  public void setTextureView(boolean textureView) {
+    this.textureViewRequested = textureView;
+    options.textureMode(translucentRequested || textureViewRequested);
   }
 }

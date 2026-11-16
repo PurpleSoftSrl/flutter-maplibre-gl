@@ -9,14 +9,37 @@ abstract class SourceProperties {
 
 class VectorSourceProperties implements SourceProperties {
   /// A URL to a TileJSON resource. Supported protocols are `http:` and
-  /// `https:`
+  /// `https:`.
   ///
   /// Type: string
   final String? url;
 
   /// An array of one or more tile source URLs, as in the TileJSON spec.
+  /// These tokens in a URL are replaced for each tile:
+  ///
+  /// - `{z}`, `{x}` and `{y}` - The tile's zoom level, column and row. With
+  /// `scheme` set to `tms`, the row counts from the bottom.
+  ///
+  /// - `{quadkey}` - The tile's quadkey, as Bing Maps addresses tiles.
+  ///
+  /// - `{bbox-epsg-3857}` - The tile's bounding box in EPSG:3857 meters, as
+  /// `minX,minY,maxX,maxY`, for WMS requests.
+  ///
+  /// - `{bbox}` - Experimental. The tile's bounding box as
+  /// `minX,minY,maxX,maxY` in the units of the map's coordinate system.
+  /// With the `mercator`, `globe` and `vertical-perspective` projections
+  /// this is the same as `{bbox-epsg-3857}`.
+  ///
+  /// - `{prefix}` - Two hexadecimal digits from the tile's column and row,
+  /// to spread requests over host names.
+  ///
+  /// - `{ratio}` - `@2x` where the device pixel ratio is above 1, empty
+  /// otherwise.
   ///
   /// Type: array
+  ///
+  /// Sdk Support:
+  ///   basic functionality on no platform yet
   final List<String>? tiles;
 
   /// An array containing the longitude and latitude of the southwest and
@@ -70,6 +93,29 @@ class VectorSourceProperties implements SourceProperties {
   /// Type: promoteId
   final String? promoteId;
 
+  /// A setting to determine whether a source's tiles are cached locally.
+  ///
+  /// Type: boolean
+  ///   default: false
+  ///
+  /// Sdk Support:
+  ///   basic functionality with android (not on ios, js)
+  final bool? volatile;
+
+  /// The encoding used by this source. Mapbox Vector Tiles encoding is used
+  /// by default.
+  ///
+  /// Type: enum
+  ///   default: mvt
+  /// Options:
+  ///   "mvt"
+  ///      Mapbox Vector Tiles. See
+  ///      http://github.com/mapbox/vector-tile-spec for more info.
+  ///   "mlt"
+  ///      MapLibre Vector Tiles. See
+  ///      https://github.com/maplibre/maplibre-tile-spec for more info.
+  final String? encoding;
+
   const VectorSourceProperties({
     this.url,
     this.tiles,
@@ -79,9 +125,11 @@ class VectorSourceProperties implements SourceProperties {
     this.maxzoom = 22,
     this.attribution,
     this.promoteId,
+    this.volatile = false,
+    this.encoding = "mvt",
   });
 
-  VectorSourceProperties copyWith(
+  VectorSourceProperties copyWith({
     String? url,
     List<String>? tiles,
     List<double>? bounds,
@@ -90,7 +138,9 @@ class VectorSourceProperties implements SourceProperties {
     double? maxzoom,
     String? attribution,
     String? promoteId,
-  ) {
+    bool? volatile,
+    String? encoding,
+  }) {
     return VectorSourceProperties(
       url: url ?? this.url,
       tiles: tiles ?? this.tiles,
@@ -100,6 +150,8 @@ class VectorSourceProperties implements SourceProperties {
       maxzoom: maxzoom ?? this.maxzoom,
       attribution: attribution ?? this.attribution,
       promoteId: promoteId ?? this.promoteId,
+      volatile: volatile ?? this.volatile,
+      encoding: encoding ?? this.encoding,
     );
   }
 
@@ -122,6 +174,8 @@ class VectorSourceProperties implements SourceProperties {
     addIfPresent('maxzoom', maxzoom);
     addIfPresent('attribution', attribution);
     addIfPresent('promoteId', promoteId);
+    addIfPresent('volatile', volatile);
+    addIfPresent('encoding', encoding);
     return json;
   }
 
@@ -135,6 +189,8 @@ class VectorSourceProperties implements SourceProperties {
       maxzoom: json['maxzoom'],
       attribution: json['attribution'],
       promoteId: json['promoteId'],
+      volatile: json['volatile'],
+      encoding: json['encoding'],
     );
   }
 }
@@ -147,8 +203,31 @@ class RasterSourceProperties implements SourceProperties {
   final String? url;
 
   /// An array of one or more tile source URLs, as in the TileJSON spec.
+  /// These tokens in a URL are replaced for each tile:
+  ///
+  /// - `{z}`, `{x}` and `{y}` - The tile's zoom level, column and row. With
+  /// `scheme` set to `tms`, the row counts from the bottom.
+  ///
+  /// - `{quadkey}` - The tile's quadkey, as Bing Maps addresses tiles.
+  ///
+  /// - `{bbox-epsg-3857}` - The tile's bounding box in EPSG:3857 meters, as
+  /// `minX,minY,maxX,maxY`, for WMS requests.
+  ///
+  /// - `{bbox}` - Experimental. The tile's bounding box as
+  /// `minX,minY,maxX,maxY` in the units of the map's coordinate system.
+  /// With the `mercator`, `globe` and `vertical-perspective` projections
+  /// this is the same as `{bbox-epsg-3857}`.
+  ///
+  /// - `{prefix}` - Two hexadecimal digits from the tile's column and row,
+  /// to spread requests over host names.
+  ///
+  /// - `{ratio}` - `@2x` where the device pixel ratio is above 1, empty
+  /// otherwise.
   ///
   /// Type: array
+  ///
+  /// Sdk Support:
+  ///   basic functionality on no platform yet
   final List<String>? tiles;
 
   /// An array containing the longitude and latitude of the southwest and
@@ -176,8 +255,7 @@ class RasterSourceProperties implements SourceProperties {
   ///   default: 22
   final double? maxzoom;
 
-  /// The minimum visual size to display tiles for this layer. Only
-  /// configurable for raster layers.
+  /// The minimum visual size to display tiles for this source.
   ///
   /// Type: number
   ///   default: 512
@@ -201,6 +279,15 @@ class RasterSourceProperties implements SourceProperties {
   /// Type: string
   final String? attribution;
 
+  /// A setting to determine whether a source's tiles are cached locally.
+  ///
+  /// Type: boolean
+  ///   default: false
+  ///
+  /// Sdk Support:
+  ///   basic functionality with android (not on ios, js)
+  final bool? volatile;
+
   const RasterSourceProperties({
     this.url,
     this.tiles,
@@ -210,9 +297,10 @@ class RasterSourceProperties implements SourceProperties {
     this.tileSize = 512,
     this.scheme = "xyz",
     this.attribution,
+    this.volatile = false,
   });
 
-  RasterSourceProperties copyWith(
+  RasterSourceProperties copyWith({
     String? url,
     List<String>? tiles,
     List<double>? bounds,
@@ -221,7 +309,8 @@ class RasterSourceProperties implements SourceProperties {
     double? tileSize,
     String? scheme,
     String? attribution,
-  ) {
+    bool? volatile,
+  }) {
     return RasterSourceProperties(
       url: url ?? this.url,
       tiles: tiles ?? this.tiles,
@@ -231,6 +320,7 @@ class RasterSourceProperties implements SourceProperties {
       tileSize: tileSize ?? this.tileSize,
       scheme: scheme ?? this.scheme,
       attribution: attribution ?? this.attribution,
+      volatile: volatile ?? this.volatile,
     );
   }
 
@@ -253,6 +343,7 @@ class RasterSourceProperties implements SourceProperties {
     addIfPresent('tileSize', tileSize);
     addIfPresent('scheme', scheme);
     addIfPresent('attribution', attribution);
+    addIfPresent('volatile', volatile);
     return json;
   }
 
@@ -266,6 +357,7 @@ class RasterSourceProperties implements SourceProperties {
       tileSize: json['tileSize'],
       scheme: json['scheme'],
       attribution: json['attribution'],
+      volatile: json['volatile'],
     );
   }
 }
@@ -278,8 +370,30 @@ class RasterDemSourceProperties implements SourceProperties {
   final String? url;
 
   /// An array of one or more tile source URLs, as in the TileJSON spec.
+  /// These tokens in a URL are replaced for each tile:
+  ///
+  /// - `{z}`, `{x}` and `{y}` - The tile's zoom level, column and row.
+  ///
+  /// - `{quadkey}` - The tile's quadkey, as Bing Maps addresses tiles.
+  ///
+  /// - `{bbox-epsg-3857}` - The tile's bounding box in EPSG:3857 meters, as
+  /// `minX,minY,maxX,maxY`, for WMS requests.
+  ///
+  /// - `{bbox}` - Experimental. The tile's bounding box as
+  /// `minX,minY,maxX,maxY` in the units of the map's coordinate system.
+  /// With the `mercator`, `globe` and `vertical-perspective` projections
+  /// this is the same as `{bbox-epsg-3857}`.
+  ///
+  /// - `{prefix}` - Two hexadecimal digits from the tile's column and row,
+  /// to spread requests over host names.
+  ///
+  /// - `{ratio}` - `@2x` where the device pixel ratio is above 1, empty
+  /// otherwise.
   ///
   /// Type: array
+  ///
+  /// Sdk Support:
+  ///   basic functionality on no platform yet
   final List<String>? tiles;
 
   /// An array containing the longitude and latitude of the southwest and
@@ -307,8 +421,7 @@ class RasterDemSourceProperties implements SourceProperties {
   ///   default: 22
   final double? maxzoom;
 
-  /// The minimum visual size to display tiles for this layer. Only
-  /// configurable for raster layers.
+  /// The minimum visual size to display tiles for this source.
   ///
   /// Type: number
   ///   default: 512
@@ -321,7 +434,7 @@ class RasterDemSourceProperties implements SourceProperties {
   final String? attribution;
 
   /// The encoding used by this source. Mapbox Terrain RGB is used by
-  /// default
+  /// default.
   ///
   /// Type: enum
   ///   default: mapbox
@@ -333,7 +446,59 @@ class RasterDemSourceProperties implements SourceProperties {
   ///      Mapbox Terrain RGB tiles. See
   ///      https://www.mapbox.com/help/access-elevation-data/#mapbox-terrain-rgb
   ///      for more info.
+  ///   "custom"
+  ///      Decodes tiles using the redFactor, blueFactor, greenFactor,
+  ///      baseShift parameters.
   final String? encoding;
+
+  /// Value that will be multiplied by the red channel value when decoding.
+  /// Only used on custom encodings.
+  ///
+  /// Type: number
+  ///   default: 1.0
+  ///
+  /// Sdk Support:
+  ///   basic functionality with js (not on ios, android)
+  final double? redFactor;
+
+  /// Value that will be multiplied by the blue channel value when decoding.
+  /// Only used on custom encodings.
+  ///
+  /// Type: number
+  ///   default: 1.0
+  ///
+  /// Sdk Support:
+  ///   basic functionality with js (not on ios, android)
+  final double? blueFactor;
+
+  /// Value that will be multiplied by the green channel value when
+  /// decoding. Only used on custom encodings.
+  ///
+  /// Type: number
+  ///   default: 1.0
+  ///
+  /// Sdk Support:
+  ///   basic functionality with js (not on ios, android)
+  final double? greenFactor;
+
+  /// Value that will be added to the encoding mix when decoding. Only used
+  /// on custom encodings.
+  ///
+  /// Type: number
+  ///   default: 0.0
+  ///
+  /// Sdk Support:
+  ///   basic functionality with js (not on ios, android)
+  final double? baseShift;
+
+  /// A setting to determine whether a source's tiles are cached locally.
+  ///
+  /// Type: boolean
+  ///   default: false
+  ///
+  /// Sdk Support:
+  ///   basic functionality with android (not on ios, js)
+  final bool? volatile;
 
   const RasterDemSourceProperties({
     this.url,
@@ -344,9 +509,14 @@ class RasterDemSourceProperties implements SourceProperties {
     this.tileSize = 512,
     this.attribution,
     this.encoding = "mapbox",
+    this.redFactor,
+    this.blueFactor,
+    this.greenFactor,
+    this.baseShift,
+    this.volatile = false,
   });
 
-  RasterDemSourceProperties copyWith(
+  RasterDemSourceProperties copyWith({
     String? url,
     List<String>? tiles,
     List<double>? bounds,
@@ -355,7 +525,12 @@ class RasterDemSourceProperties implements SourceProperties {
     double? tileSize,
     String? attribution,
     String? encoding,
-  ) {
+    double? redFactor,
+    double? blueFactor,
+    double? greenFactor,
+    double? baseShift,
+    bool? volatile,
+  }) {
     return RasterDemSourceProperties(
       url: url ?? this.url,
       tiles: tiles ?? this.tiles,
@@ -365,6 +540,11 @@ class RasterDemSourceProperties implements SourceProperties {
       tileSize: tileSize ?? this.tileSize,
       attribution: attribution ?? this.attribution,
       encoding: encoding ?? this.encoding,
+      redFactor: redFactor ?? this.redFactor,
+      blueFactor: blueFactor ?? this.blueFactor,
+      greenFactor: greenFactor ?? this.greenFactor,
+      baseShift: baseShift ?? this.baseShift,
+      volatile: volatile ?? this.volatile,
     );
   }
 
@@ -387,6 +567,11 @@ class RasterDemSourceProperties implements SourceProperties {
     addIfPresent('tileSize', tileSize);
     addIfPresent('attribution', attribution);
     addIfPresent('encoding', encoding);
+    addIfPresent('redFactor', redFactor);
+    addIfPresent('blueFactor', blueFactor);
+    addIfPresent('greenFactor', greenFactor);
+    addIfPresent('baseShift', baseShift);
+    addIfPresent('volatile', volatile);
     return json;
   }
 
@@ -400,6 +585,11 @@ class RasterDemSourceProperties implements SourceProperties {
       tileSize: json['tileSize'],
       attribution: json['attribution'],
       encoding: json['encoding'],
+      redFactor: json['redFactor'],
+      blueFactor: json['blueFactor'],
+      greenFactor: json['greenFactor'],
+      baseShift: json['baseShift'],
+      volatile: json['volatile'],
     );
   }
 }
@@ -434,6 +624,12 @@ class GeojsonSourceProperties implements SourceProperties {
   ///   maximum: 512
   final double? buffer;
 
+  /// An expression for filtering features prior to processing them for
+  /// rendering.
+  ///
+  /// Type: filter
+  final Object? filter;
+
   /// Douglas-Peucker simplification tolerance (higher means simpler
   /// geometries and faster performance).
   ///
@@ -444,11 +640,15 @@ class GeojsonSourceProperties implements SourceProperties {
   /// If the data is a collection of point features, setting this to true
   /// clusters the points by radius into groups. Cluster groups become new
   /// `Point` features in the source with additional properties:
+  ///
   /// * `cluster` Is `true` if the point is a cluster
-  /// * `cluster_id` A unqiue id for the cluster to be used in conjunction
+  ///
+  /// * `cluster_id` A unique id for the cluster to be used in conjunction
   /// with the [cluster inspection
-  /// methods](https://maplibre.org/maplibre-gl-js/docs/API/classes/maplibregl.GeoJSONSource/#getclusterexpansionzoom)
+  /// methods](https://maplibre.org/maplibre-gl-js/docs/API/classes/GeoJSONSource/#getclusterexpansionzoom)
+  ///
   /// * `point_count` Number of original points grouped into this cluster
+  ///
   /// * `point_count_abbreviated` An abbreviated point count
   ///
   /// Type: boolean
@@ -465,28 +665,43 @@ class GeojsonSourceProperties implements SourceProperties {
 
   /// Max zoom on which to cluster points if clustering is enabled. Defaults
   /// to one zoom less than maxzoom (so that last zoom features are not
-  /// clustered).
+  /// clustered). Clusters are re-evaluated at integer zoom levels so
+  /// setting clusterMaxZoom to 14 means the clusters will be displayed
+  /// until z15.
   ///
   /// Type: number
   final double? clusterMaxZoom;
+
+  /// Minimum number of points necessary to form a cluster if clustering is
+  /// enabled. Defaults to `2`.
+  ///
+  /// Type: number
+  final double? clusterMinPoints;
 
   /// An object defining custom properties on the generated clusters if
   /// clustering is enabled, aggregating values from clustered points. Has
   /// the form `{"property_name": [operator, map_expression]}`. `operator`
   /// is any expression function that accepts at least 2 operands (e.g.
-  /// `"+"` or `"max"`) — it accumulates the property value from
+  /// `"+"` or `"max"`) - it accumulates the property value from
   /// clusters/points the cluster contains; `map_expression` produces the
-  /// value of a single point.Example: `{"sum": ["+", ["get",
-  /// "scalerank"]]}`.For more advanced use cases, in place of `operator`,
-  /// you can use a custom reduce expression that references a special
-  /// `["accumulated"]` value, e.g.:`{"sum": [["+", ["accumulated"],
-  /// ["get", "sum"]], ["get", "scalerank"]]}`
+  /// value of a single point.
+  ///
+  /// Example: `{"sum": ["+", ["get", "scalerank"]]}`.
+  ///
+  /// For more advanced use cases, in place of `operator`, you can use a
+  /// custom reduce expression that references a special `["accumulated"]`
+  /// value, e.g.:
+  ///
+  /// `{"sum": [["+", ["accumulated"], ["get", "sum"]], ["get",
+  /// "scalerank"]]}`
   ///
   /// Type: *
   final Object? clusterProperties;
 
   /// Whether to calculate line distance metrics. This is required for line
-  /// layers that specify `line-gradient` values.
+  /// layers that specify
+  /// [`line-gradient`](https://maplibre.org/maplibre-style-spec/layers/#line-gradient)
+  /// values.
   ///
   /// Type: boolean
   ///   default: false
@@ -512,39 +727,45 @@ class GeojsonSourceProperties implements SourceProperties {
     this.maxzoom = 18,
     this.attribution,
     this.buffer = 128,
+    this.filter,
     this.tolerance = 0.375,
     this.cluster = false,
     this.clusterRadius = 50,
     this.clusterMaxZoom,
+    this.clusterMinPoints,
     this.clusterProperties,
     this.lineMetrics = false,
     this.generateId = false,
     this.promoteId,
   });
 
-  GeojsonSourceProperties copyWith(
+  GeojsonSourceProperties copyWith({
     Object? data,
     double? maxzoom,
     String? attribution,
     double? buffer,
+    Object? filter,
     double? tolerance,
     bool? cluster,
     double? clusterRadius,
     double? clusterMaxZoom,
+    double? clusterMinPoints,
     Object? clusterProperties,
     bool? lineMetrics,
     bool? generateId,
     String? promoteId,
-  ) {
+  }) {
     return GeojsonSourceProperties(
       data: data ?? this.data,
       maxzoom: maxzoom ?? this.maxzoom,
       attribution: attribution ?? this.attribution,
       buffer: buffer ?? this.buffer,
+      filter: filter ?? this.filter,
       tolerance: tolerance ?? this.tolerance,
       cluster: cluster ?? this.cluster,
       clusterRadius: clusterRadius ?? this.clusterRadius,
       clusterMaxZoom: clusterMaxZoom ?? this.clusterMaxZoom,
+      clusterMinPoints: clusterMinPoints ?? this.clusterMinPoints,
       clusterProperties: clusterProperties ?? this.clusterProperties,
       lineMetrics: lineMetrics ?? this.lineMetrics,
       generateId: generateId ?? this.generateId,
@@ -567,10 +788,12 @@ class GeojsonSourceProperties implements SourceProperties {
     addIfPresent('maxzoom', maxzoom);
     addIfPresent('attribution', attribution);
     addIfPresent('buffer', buffer);
+    addIfPresent('filter', filter);
     addIfPresent('tolerance', tolerance);
     addIfPresent('cluster', cluster);
     addIfPresent('clusterRadius', clusterRadius);
     addIfPresent('clusterMaxZoom', clusterMaxZoom);
+    addIfPresent('clusterMinPoints', clusterMinPoints);
     addIfPresent('clusterProperties', clusterProperties);
     addIfPresent('lineMetrics', lineMetrics);
     addIfPresent('generateId', generateId);
@@ -584,10 +807,12 @@ class GeojsonSourceProperties implements SourceProperties {
       maxzoom: json['maxzoom'],
       attribution: json['attribution'],
       buffer: json['buffer'],
+      filter: json['filter'],
       tolerance: json['tolerance'],
       cluster: json['cluster'],
       clusterRadius: json['clusterRadius'],
       clusterMaxZoom: json['clusterMaxZoom'],
+      clusterMinPoints: json['clusterMinPoints'],
       clusterProperties: json['clusterProperties'],
       lineMetrics: json['lineMetrics'],
       generateId: json['generateId'],
@@ -596,6 +821,10 @@ class GeojsonSourceProperties implements SourceProperties {
   }
 }
 
+/// A video drawn over four corners of the map.
+///
+/// **Platform support**: web only. On Android and iOS
+/// `MapLibreMapController.addSource` throws `UNSUPPORTED_SOURCE_TYPE`.
 class VideoSourceProperties implements SourceProperties {
   /// URLs to video content in order of preferred format.
   ///
@@ -612,10 +841,10 @@ class VideoSourceProperties implements SourceProperties {
     this.coordinates,
   });
 
-  VideoSourceProperties copyWith(
+  VideoSourceProperties copyWith({
     List<String>? urls,
     List<List>? coordinates,
-  ) {
+  }) {
     return VideoSourceProperties(
       urls: urls ?? this.urls,
       coordinates: coordinates ?? this.coordinates,
@@ -646,13 +875,18 @@ class VideoSourceProperties implements SourceProperties {
   }
 }
 
+/// An image drawn from a url over four corners of the map. For image bytes, use
+/// `MapLibreMapController.addImageSource`.
 class ImageSourceProperties implements SourceProperties {
-  /// URL that points to an image.
+  /// URL that points to an image. Required: `addSource` throws
+  /// `INVALID_ARGUMENT` without it.
   ///
   /// Type: string
   final String? url;
 
-  /// Corners of image specified in longitude, latitude pairs.
+  /// Corners of the image as [longitude, latitude]: top left, top right,
+  /// bottom right, bottom left. Required: `addSource` throws
+  /// `INVALID_ARGUMENT` without four valid corners.
   ///
   /// Type: array
   final List<List>? coordinates;
@@ -662,10 +896,10 @@ class ImageSourceProperties implements SourceProperties {
     this.coordinates,
   });
 
-  ImageSourceProperties copyWith(
+  ImageSourceProperties copyWith({
     String? url,
     List<List>? coordinates,
-  ) {
+  }) {
     return ImageSourceProperties(
       url: url ?? this.url,
       coordinates: coordinates ?? this.coordinates,

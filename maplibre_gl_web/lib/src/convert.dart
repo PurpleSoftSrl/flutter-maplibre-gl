@@ -33,8 +33,10 @@ class Convert {
       sink.setStyle(styleString);
     }
     if (options.containsKey('minMaxZoomPreference')) {
-      sink.setMinMaxZoomPreference(options['minMaxZoomPreference'][0],
-          options['minMaxZoomPreference'][1]);
+      sink.setMinMaxZoomPreference(
+        options['minMaxZoomPreference'][0],
+        options['minMaxZoomPreference'][1],
+      );
     }
     if (options['rotateGesturesEnabled'] != null &&
         options['scrollGesturesEnabled'] != null &&
@@ -42,11 +44,15 @@ class Convert {
         options['zoomGesturesEnabled'] != null &&
         options['doubleClickZoomEnabled'] != null) {
       sink.setGestures(
-          rotateGesturesEnabled: options['rotateGesturesEnabled'],
-          scrollGesturesEnabled: options['scrollGesturesEnabled'],
-          tiltGesturesEnabled: options['tiltGesturesEnabled'],
-          zoomGesturesEnabled: options['zoomGesturesEnabled'],
-          doubleClickZoomEnabled: options['doubleClickZoomEnabled']);
+        rotateGesturesEnabled: options['rotateGesturesEnabled'],
+        scrollGesturesEnabled: options['scrollGesturesEnabled'],
+        tiltGesturesEnabled: options['tiltGesturesEnabled'],
+        zoomGesturesEnabled: options['zoomGesturesEnabled'],
+        doubleClickZoomEnabled: options['doubleClickZoomEnabled'],
+        panInertia: options['panInertia'] is int
+            ? PanInertia.values[options['panInertia']]
+            : PanInertia.normal,
+      );
     }
 
     if (options.containsKey('trackCameraPosition')) {
@@ -63,13 +69,20 @@ class Convert {
     if (options.containsKey('myLocationRenderMode')) {
       sink.setMyLocationRenderMode(options['myLocationRenderMode']);
     }
+    if (options['myLocationStyle'] is Map) {
+      sink.setMyLocationStyle(
+        Map<String, dynamic>.from(options['myLocationStyle'] as Map),
+      );
+    }
     if (options.containsKey('logoViewPosition')) {
       final position = LogoViewPosition.values[options['logoViewPosition']];
       sink.setLogoViewAlignment(position);
     }
     if (options.containsKey('logoViewMargins')) {
       sink.setLogoViewMargins(
-          options['logoViewMargins'][0], options['logoViewMargins'][1]);
+        options['logoViewMargins'][0],
+        options['logoViewMargins'][1],
+      );
     }
     if (options.containsKey('compassViewPosition')) {
       final position =
@@ -78,23 +91,69 @@ class Convert {
     }
     if (options.containsKey('compassViewMargins')) {
       sink.setCompassViewMargins(
-          options['compassViewMargins'][0], options['compassViewMargins'][1]);
+        options['compassViewMargins'][0],
+        options['compassViewMargins'][1],
+      );
+    }
+    // Only what the options carry is applied: an update without them keeps
+    // the attribution where it is, shown or hidden. Enabled goes first, so a
+    // map created hidden never adds the control only to remove it again.
+    if (options.containsKey('attributionEnabled')) {
+      sink.setAttributionEnabled(options['attributionEnabled']);
     }
     if (options.containsKey('attributionButtonPosition')) {
       final position = AttributionButtonPosition
           .values[options['attributionButtonPosition']];
       sink.setAttributionButtonAlignment(position);
-    } else {
-      sink.setAttributionButtonAlignment(AttributionButtonPosition.bottomRight);
     }
     if (options.containsKey('attributionButtonMargins')) {
-      sink.setAttributionButtonMargins(options['attributionButtonMargins'][0],
-          options['attributionButtonMargins'][1]);
+      sink.setAttributionButtonMargins(
+        options['attributionButtonMargins'][0],
+        options['attributionButtonMargins'][1],
+      );
+    }
+    if (options.containsKey('scaleControlEnabled')) {
+      sink.setScaleControlEnabled(options['scaleControlEnabled']);
+    }
+    if (options.containsKey('scaleControlPosition')) {
+      final position =
+          ScaleControlPosition.values[options['scaleControlPosition']];
+      sink.setScaleControlPosition(position);
+    }
+    if (options.containsKey('scaleControlUnit')) {
+      final unit = ScaleControlUnit.values[options['scaleControlUnit']];
+      sink.setScaleControlUnit(unit);
+    }
+    if (options.containsKey('featureTapsTriggersMapClick')) {
+      sink.setFeatureTapsTriggersMapClick(
+        options['featureTapsTriggersMapClick'],
+      );
+    }
+    if (options.containsKey('symbolPlacementTransitionsEnabled')) {
+      sink.setSymbolPlacementTransitionsEnabled(
+        options['symbolPlacementTransitionsEnabled'],
+      );
+    }
+    if (options.containsKey('locationSource')) {
+      sink.setLocationSource(options['locationSource'] as String);
+    }
+    if (options.containsKey('locationEngineProperties')) {
+      final props = options['locationEngineProperties'] as List?;
+      // Web serializes as [enableHighAccuracy (0/1), maximumAge, timeout]
+      if (props != null && props.isNotEmpty) {
+        sink.setLocationEngineProperties(
+          enableHighAccuracy: props[0] == 1,
+          maximumAge: props.length > 1 ? props[1] as int : 0,
+          timeout: props.length > 2 ? props[2] as int : 0,
+        );
+      }
     }
   }
 
   static CameraOptions toCameraOptions(
-      CameraUpdate cameraUpdate, MapLibreMap mapLibreMap) {
+    CameraUpdate cameraUpdate,
+    MapLibreMap mapLibreMap,
+  ) {
     final List<dynamic> json = cameraUpdate.toJson();
     final type = json[0] as String;
     switch (type) {
@@ -120,19 +179,24 @@ class Convert {
         final top = json[3];
         final right = json[4];
         final bottom = json[5];
+        // cameraForBounds fits at bearing 0 unless told otherwise, so pass the
+        // current one to keep it, as Android and iOS do. The result carries no
+        // pitch, so the move keeps the current pitch too.
         final camera = mapLibreMap.cameraForBounds(
-            LngLatBounds(
-              LngLat(bounds[0][1], bounds[0][0]),
-              LngLat(bounds[1][1], bounds[1][0]),
-            ),
-            {
-              'padding': {
-                'top': top,
-                'bottom': bottom,
-                'left': left,
-                'right': right,
-              }
-            });
+          LngLatBounds(
+            LngLat(bounds[0][1], bounds[0][0]),
+            LngLat(bounds[1][1], bounds[1][0]),
+          ),
+          {
+            'bearing': mapLibreMap.getBearing(),
+            'padding': {
+              'top': top,
+              'bottom': bottom,
+              'left': left,
+              'right': right,
+            },
+          },
+        );
         return camera;
       case 'newLatLngZoom':
         final target = json[1];
@@ -148,8 +212,9 @@ class Convert {
         final y = json[2];
         final point = mapLibreMap.project(mapLibreMap.getCenter());
         return CameraOptions(
-          center:
-              mapLibreMap.unproject(geo_point.Point(point.x + x, point.y + y)),
+          center: mapLibreMap.unproject(
+            geo_point.Point(point.x + x, point.y + y),
+          ),
           zoom: mapLibreMap.getZoom(),
           pitch: mapLibreMap.getPitch(),
           bearing: mapLibreMap.getBearing(),
@@ -166,8 +231,20 @@ class Convert {
           );
         }
         final point = json[2];
+        final focusX = (point[0] as num).toDouble();
+        final focusY = (point[1] as num).toDouble();
+        // Keeps the point under the focus where it is on screen rather than
+        // recentring on it: the view center moves toward the focus by the
+        // share of the distance the zoom takes away.
+        final center = mapLibreMap.project(mapLibreMap.getCenter());
+        final scale = pow(2, -(zoom as num)).toDouble();
         return CameraOptions(
-          center: mapLibreMap.unproject(geo_point.Point(point[0], point[1])),
+          center: mapLibreMap.unproject(
+            geo_point.Point(
+              focusX + (center.x - focusX) * scale,
+              focusY + (center.y - focusY) * scale,
+            ),
+          ),
           zoom: mapLibreMap.getZoom() + zoom,
           pitch: mapLibreMap.getPitch(),
           bearing: mapLibreMap.getBearing(),
@@ -216,7 +293,9 @@ class Convert {
   }
 
   static Feature interpretSymbolOptions(
-      SymbolOptions options, Feature feature) {
+    SymbolOptions options,
+    Feature feature,
+  ) {
     final properties = feature.properties;
     var geometry = feature.geometry;
     if (options.iconSize != null) {
@@ -231,7 +310,7 @@ class Convert {
     if (options.iconOffset != null) {
       properties['iconOffset'] = [
         options.iconOffset!.dx,
-        options.iconOffset!.dy
+        options.iconOffset!.dy,
       ];
     }
     if (options.iconAnchor != null) {
@@ -264,7 +343,7 @@ class Convert {
     if (options.textOffset != null) {
       properties['textOffset'] = [
         options.textOffset!.dx,
-        options.textOffset!.dy
+        options.textOffset!.dy,
       ];
     }
     if (options.iconOpacity != null) {
@@ -354,7 +433,9 @@ class Convert {
   }
 
   static Feature interpretCircleOptions(
-      CircleOptions options, Feature feature) {
+    CircleOptions options,
+    Feature feature,
+  ) {
     final properties = feature.properties;
     var geometry = feature.geometry;
     if (options.circleRadius != null) {
@@ -391,7 +472,8 @@ class Convert {
   }
 
   static List<List<List<double>>> fillGeometryToFeatureGeometry(
-      List<List<LatLng>> geom) {
+    List<List<LatLng>> geom,
+  ) {
     final convertedFill = <List<List<double>>>[];
     for (final ring in geom) {
       final convertedRing = <List<double>>[];
@@ -404,7 +486,8 @@ class Convert {
   }
 
   static List<List<LatLng>> featureGeometryToFillGeometry(
-      List<List<List<double>>> geom) {
+    List<List<List<double>>> geom,
+  ) {
     final convertedFill = <List<LatLng>>[];
     for (final ring in geom) {
       final convertedRing = <LatLng>[];

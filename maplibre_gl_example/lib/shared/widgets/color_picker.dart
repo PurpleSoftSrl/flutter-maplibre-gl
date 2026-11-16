@@ -24,10 +24,7 @@ class ColorPickerModal {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
             Wrap(
               spacing: 8,
@@ -89,8 +86,9 @@ class ColorPickerModal {
     String title = 'Select Color',
     String? currentHexColor,
   }) async {
-    final currentColor =
-        currentHexColor != null ? _hexToColor(currentHexColor) : null;
+    final currentColor = currentHexColor != null
+        ? _hexToColor(currentHexColor)
+        : null;
 
     return await show(
       context: context,

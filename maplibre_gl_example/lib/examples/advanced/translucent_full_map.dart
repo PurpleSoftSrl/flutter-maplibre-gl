@@ -7,11 +7,11 @@ import '../../shared/shared.dart';
 /// Example demonstrating a translucent map with content underneath
 class TranslucentFullMapPage extends ExamplePage {
   const TranslucentFullMapPage({super.key})
-      : super(
-          const Icon(Icons.layers),
-          'Translucent map',
-          category: ExampleCategory.advanced,
-        );
+    : super(
+        const Icon(Icons.layers),
+        'Translucent map',
+        category: ExampleCategory.advanced,
+      );
 
   @override
   Widget build(BuildContext context) => const _TranslucentMapBody();
@@ -80,7 +80,9 @@ class _TranslucentMapBodyState extends State<_TranslucentMapBody> {
             // This is a random color, for example purposes.
             foregroundLoadColor: Colors.purple,
             // This sets the map to be translucent.
-            translucentTextureSurface: true,
+            androidView: const AndroidMapView(
+              surface: AndroidMapSurface.translucentTextureView,
+            ),
           ),
         ],
       ),
@@ -89,8 +91,8 @@ class _TranslucentMapBodyState extends State<_TranslucentMapBody> {
         icon: _canReset ? Icons.refresh : Icons.location_searching,
         onPressed: _canInteractWithMap
             ? _canReset
-                ? _resetCamera
-                : _moveCameraToTokyo
+                  ? _resetCamera
+                  : _moveCameraToTokyo
             : null,
         style: ExampleButtonStyle.tonal,
       ),

@@ -17,8 +17,8 @@ class Symbol implements Annotation {
   @override
   String get id => _id;
 
-  final Map? _data;
-  Map? get data => _data;
+  final Map<String, dynamic>? _data;
+  Map<String, dynamic>? get data => _data;
 
   /// The symbol configuration options most recently applied programmatically
   /// via the map controller.
@@ -32,14 +32,18 @@ class Symbol implements Annotation {
     final geojson = options.toGeoJson();
     geojson["id"] = id;
     geojson["properties"]["id"] = id;
+    if (_data != null) {
+      geojson["properties"].addAll(_data);
+    }
 
     return geojson;
   }
 
   @override
   void translate(LatLng delta) {
-    options =
-        options.copyWith(SymbolOptions(geometry: options.geometry! + delta));
+    options = options.copyWith(
+      SymbolOptions(geometry: options.geometry! + delta),
+    );
   }
 }
 
@@ -91,6 +95,14 @@ class SymbolOptions {
   });
 
   final double? iconSize;
+
+  /// The name of an image the map has, from the style's sprite or `addImage`.
+  ///
+  /// A name the map lacks that is a Flutter asset path, such as
+  /// `assets/pins/pin.png`, is loaded from the app's assets. With `2.0x` and
+  /// `3.0x` variants it is sized like `Image.asset`, the same on every
+  /// platform; a file without variants is drawn like `addImage` without a
+  /// `pixelRatio`.
   final String? iconImage;
   final double? iconRotate;
   final Offset? iconOffset;
@@ -204,8 +216,8 @@ class SymbolOptions {
       "properties": toJson(false),
       "geometry": {
         "type": "Point",
-        "coordinates": geometry!.toGeoJsonCoordinates()
-      }
+        "coordinates": geometry!.toGeoJsonCoordinates(),
+      },
     };
   }
 }

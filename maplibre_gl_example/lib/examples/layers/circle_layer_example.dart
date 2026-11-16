@@ -1,4 +1,3 @@
-import 'dart:developer' as dev;
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -9,11 +8,11 @@ import '../../shared/shared.dart';
 /// Example demonstrating circle layer properties
 class CircleLayerExample extends ExamplePage {
   const CircleLayerExample({super.key})
-      : super(
-          const Icon(Icons.circle_outlined),
-          'Circle Layer',
-          category: ExampleCategory.layers,
-        );
+    : super(
+        const Icon(Icons.circle_outlined),
+        'Circle Layer',
+        category: ExampleCategory.layers,
+      );
 
   @override
   Widget build(BuildContext context) => const _CircleLayerBody();
@@ -62,13 +61,10 @@ class _CircleLayerBodyState extends State<_CircleLayerBody> {
 
     try {
       // Add GeoJSON source with multiple points
-      await _controller!.addGeoJsonSource(
-        _sourceId,
-        {
-          'type': 'FeatureCollection',
-          'features': _generateRandomPoints(20),
-        },
-      );
+      await _controller!.addGeoJsonSource(_sourceId, {
+        'type': 'FeatureCollection',
+        'features': _generateRandomPoints(20),
+      });
 
       // Add circle layer
       await _controller!.addCircleLayer(
@@ -91,7 +87,7 @@ class _CircleLayerBodyState extends State<_CircleLayerBody> {
 
       setState(() {});
     } catch (e) {
-      dev.log('Error adding circle layer: $e');
+      print('CircleLayerExample: Error adding circle layer: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error adding circle layer: $e')),
@@ -142,7 +138,7 @@ class _CircleLayerBodyState extends State<_CircleLayerBody> {
         ),
       );
     } catch (e) {
-      dev.log('Error updating circle layer: $e');
+      print('CircleLayerExample: Error updating circle layer: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error updating circle layer: $e')),
@@ -171,7 +167,9 @@ class _CircleLayerBodyState extends State<_CircleLayerBody> {
                 title: 'Circle Size',
                 children: [
                   ListTile(
-                    title: Text('Radius: ${_circleRadius.toStringAsFixed(1)}'),
+                    title: Text(
+                      'Radius: ${_circleRadius.toStringAsFixed(1)}',
+                    ),
                     subtitle: Slider(
                       value: _circleRadius,
                       min: 5.0,
@@ -216,7 +214,8 @@ class _CircleLayerBodyState extends State<_CircleLayerBody> {
                   ),
                   ListTile(
                     title: Text(
-                        'Opacity: ${(_circleOpacity * 100).toStringAsFixed(0)}%'),
+                      'Opacity: ${(_circleOpacity * 100).toStringAsFixed(0)}%',
+                    ),
                     subtitle: Slider(
                       value: _circleOpacity,
                       min: 0.0,
@@ -235,7 +234,8 @@ class _CircleLayerBodyState extends State<_CircleLayerBody> {
                 children: [
                   ListTile(
                     title: Text(
-                        'Stroke Width: ${_circleStrokeWidth.toStringAsFixed(1)}'),
+                      'Stroke Width: ${_circleStrokeWidth.toStringAsFixed(1)}',
+                    ),
                     subtitle: Slider(
                       value: _circleStrokeWidth,
                       min: 0.0,
@@ -262,7 +262,8 @@ class _CircleLayerBodyState extends State<_CircleLayerBody> {
                   ),
                   ListTile(
                     title: Text(
-                        'Stroke Opacity: ${(_circleStrokeOpacity * 100).toStringAsFixed(0)}%'),
+                      'Stroke Opacity: ${(_circleStrokeOpacity * 100).toStringAsFixed(0)}%',
+                    ),
                     subtitle: Slider(
                       value: _circleStrokeOpacity,
                       min: 0.0,
@@ -283,14 +284,8 @@ class _CircleLayerBodyState extends State<_CircleLayerBody> {
                     title: const Text('Pitch Alignment'),
                     subtitle: ExampleSegmentedButton<double>(
                       segments: const [
-                        ExampleSegment(
-                          value: 0.0,
-                          label: 'Viewport',
-                        ),
-                        ExampleSegment(
-                          value: 1.0,
-                          label: 'Map',
-                        ),
+                        ExampleSegment(value: 0.0, label: 'Viewport'),
+                        ExampleSegment(value: 1.0, label: 'Map'),
                       ],
                       selected: _circlePitchAlignment,
                       onSelectionChanged: (value) async {
@@ -301,7 +296,8 @@ class _CircleLayerBodyState extends State<_CircleLayerBody> {
                   ),
                   ListTile(
                     title: Text(
-                        'Translate X: ${_circleTranslateX.toStringAsFixed(0)}'),
+                      'Translate X: ${_circleTranslateX.toStringAsFixed(0)}',
+                    ),
                     subtitle: Slider(
                       value: _circleTranslateX,
                       min: -50.0,
@@ -315,7 +311,8 @@ class _CircleLayerBodyState extends State<_CircleLayerBody> {
                   ),
                   ListTile(
                     title: Text(
-                        'Translate Y: ${_circleTranslateY.toStringAsFixed(0)}'),
+                      'Translate Y: ${_circleTranslateY.toStringAsFixed(0)}',
+                    ),
                     subtitle: Slider(
                       value: _circleTranslateY,
                       min: -50.0,

@@ -6,11 +6,11 @@ import '../../shared/shared.dart';
 /// Example demonstrating camera bounds and constraints
 class CameraBoundsExample extends ExamplePage {
   const CameraBoundsExample({super.key})
-      : super(
-          const Icon(Icons.crop),
-          'Camera Bounds & Constraints',
-          category: ExampleCategory.camera,
-        );
+    : super(
+        const Icon(Icons.crop),
+        'Camera Bounds & Constraints',
+        category: ExampleCategory.camera,
+      );
 
   @override
   Widget build(BuildContext context) => const _CameraBoundsBody();
@@ -123,7 +123,7 @@ class _CameraBoundsBodyState extends State<_CameraBoundsBody> {
     final hasController = _controller != null;
     final boundsInfo = _currentBounds != null
         ? 'SW: ${_currentBounds!.southwest.latitude.toStringAsFixed(2)}, ${_currentBounds!.southwest.longitude.toStringAsFixed(2)}\n'
-            'NE: ${_currentBounds!.northeast.latitude.toStringAsFixed(2)}, ${_currentBounds!.northeast.longitude.toStringAsFixed(2)}'
+              'NE: ${_currentBounds!.northeast.latitude.toStringAsFixed(2)}, ${_currentBounds!.northeast.longitude.toStringAsFixed(2)}'
         : 'Loading...';
 
     return MapExampleScaffold(

@@ -1,33 +1,63 @@
 name: maplibre_gl_example
 description: Demonstrates how to use the maplibre_gl plugin.
 publish_to: 'none'
-version: 0.25.0
+version: 0.28.0
 repository: https://github.com/maplibre/flutter-maplibre-gl
 issue_tracker: https://github.com/maplibre/flutter-maplibre-gl/issues
 resolution: workspace
 
 environment:
-  sdk: ">=3.5.0 <4.0.0"
-  flutter: '>=3.22.0'
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: '>=3.44.0'
 
 dependencies:
-  collection: ^1.17.1
-  device_info_plus: ^13.3.0
+  collection: ^1.19.1
+  file_picker: ^13.1.0
   flutter:
     sdk: flutter
   flutter_hooks: ^0.21.3+1
-  http: ^1.1.0
-  location: ^10.1.0
+  http: ^1.6.0
   maplibre_gl:
     path: ../maplibre_gl
   path_provider: ^2.1.5
+  # Held at 12.x: permission_handler_android 14 requires the app to compile
+  # against Android SDK 37, and Flutter stable still sets compileSdk 36, so the
+  # build fails at checkReleaseAarMetadata. Lift this once Flutter moves to 37.
+  permission_handler: ^13.0.2
+  share_plus: ^13.3.0
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.3
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
   very_good_analysis: ^11.0.0
+  web: ^1.1.1
+
+flutter_launcher_icons:
+  image_path: "assets/maplibre_icon.png"
+  # Android adaptive icon: logo on dark brand background
+  android: "launcher_icon"
+  adaptive_icon_background: "#111725"
+  adaptive_icon_foreground: "assets/maplibre_icon.png"
+  # iOS: fill transparent areas with dark brand background
+  ios: true
+  image_path_ios: "assets/maplibre_icon.png"
+  background_color_ios: "#111725"
+  remove_alpha_ios: true
+  # Web PWA icons
+  web:
+    generate: true
+    image_path: "assets/maplibre_icon.png"
+    background_color: "#111725"
 
 flutter:
+  # Build iOS/macOS via Swift Package Manager (with a CocoaPods fallback for
+  # plugins that don't yet ship a Package.swift). Pinned here so CI and other
+  # contributors get the same behavior without a global `flutter config` flag.
+  config:
+    enable-swift-package-manager: true
   uses-material-design: true
   assets:
     - assets/pattern/cat_silhouette_pattern.png
@@ -36,9 +66,11 @@ flutter:
     - assets/symbols/2.0x/custom-icon.png
     - assets/symbols/3.0x/custom-icon.png
     - assets/symbols/custom-marker.png
+    # Integration tests: add_image_size_test.dart.
+    - assets/icon_size/
     - assets/style.json
     - assets/translucent_style.json
-    - assets/osm_style.json
+    - assets/raster_style.json
     - assets/pmtiles_style.json
     - assets/sydney0.png
     - assets/sydney1.png

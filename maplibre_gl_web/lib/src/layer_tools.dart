@@ -8,6 +8,7 @@ const _layoutProperties = {
   "symbol-sort-key",
   "symbol-z-order",
   "icon-allow-overlap",
+  "icon-overlap",
   "icon-ignore-placement",
   "icon-optional",
   "icon-rotation-alignment",
@@ -32,6 +33,7 @@ const _layoutProperties = {
   "text-justify",
   "text-radial-offset",
   "text-variable-anchor",
+  "text-variable-anchor-offset",
   "text-anchor",
   "text-max-angle",
   "text-writing-mode",
@@ -41,8 +43,11 @@ const _layoutProperties = {
   "text-transform",
   "text-offset",
   "text-allow-overlap",
+  "text-overlap",
   "text-ignore-placement",
   "text-optional",
+  "symbol-height-offset",
+  "symbol-height-anchor",
   "visibility",
   "circle-sort-key",
   "line-cap",
@@ -51,6 +56,7 @@ const _layoutProperties = {
   "line-round-limit",
   "line-sort-key",
   "fill-sort-key",
+  "fill-extrusion-rounded-corner-distance",
 };
 
 bool isLayoutProperty(String property) {

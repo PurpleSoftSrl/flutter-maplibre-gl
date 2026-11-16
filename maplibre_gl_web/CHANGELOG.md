@@ -1,4 +1,129 @@
-See top-level [CHANGELOG.md](../CHANGELOG.md) for full details.
+See the [top-level CHANGELOG](https://github.com/maplibre/flutter-maplibre-gl/blob/main/CHANGELOG.md) for full details.
+
+## [0.28.0](https://github.com/maplibre/flutter-maplibre-gl/compare/v0.27.1...v0.28.0)
+
+The web implementation of [`maplibre_gl`](https://pub.dev/packages/maplibre_gl): apps depend on `maplibre_gl`, whose [changelog](https://pub.dev/packages/maplibre_gl/changelog) covers every platform.
+
+### Actions needed
+* Flutter 3.44 and Dart 3.12 are the minimum (#1177).
+* Calls that did nothing, or answered a wrong value, now throw the errors Android and iOS throw. Update your `catch` blocks: see the [migration guide](https://maplibre.org/flutter-maplibre-gl/migration/#error-codes) and [Errors](https://maplibre.org/flutter-maplibre-gl/concepts/errors/) (#1065, #1068, #1119, #1123).
+
+### Added
+* [`moveLayer`](https://maplibre.org/flutter-maplibre-gl/layers/#manage-layers) moves a layer below another one, or to the top, without recreating it (#1086).
+* [`setLayerZoomRange`](https://maplibre.org/flutter-maplibre-gl/layers/#manage-layers) changes the zoom range in which a layer is drawn (#1092).
+* [`onCameraMoveStarted`](https://maplibre.org/flutter-maplibre-gl/camera/camera-controls/#tell-the-users-moves-from-the-apps) tells whether a user gesture or the app moved the camera; the mouse wheel and the keyboard count as gestures (#1159).
+* [`setLayersVisibility`](https://maplibre.org/flutter-maplibre-gl/layers/#manage-layers) shows or hides several layers in one call (#1109).
+* `addImage` takes a [`pixelRatio`](https://maplibre.org/flutter-maplibre-gl/annotations/markers/#where-icons-come-from): pass `MediaQuery.devicePixelRatioOf(context)` for the size Android and iOS draw (#1129).
+* [`addImageSource`](https://maplibre.org/flutter-maplibre-gl/layers/various-sources/#image-source-geo-referenced-overlay), `updateImageSource`, `addImageLayer` and `addImageLayerBelow` work as on Android and iOS (#1119).
+* [`getGlobalState()`](https://maplibre.org/flutter-maplibre-gl/advanced/expressions/#global-state) reads the style's global state, and `setGlobalStateProperty` throws the errors Android and iOS throw (#1179).
+* [`MapLibreMap.myLocationStyle`](https://maplibre.org/flutter-maplibre-gl/advanced/user-location/#style-the-puck) recolors the user-location puck (#1101).
+* [`MapLibreMap.panInertia`](https://maplibre.org/flutter-maplibre-gl/camera/camera-controls/#glide-after-a-pan) sets how long the map keeps gliding after a pan (#1032).
+* [`MapLibreMap.symbolPlacementTransitionsEnabled`](https://maplibre.org/flutter-maplibre-gl/layers/symbol-layer/#symbols-that-update-often) turns off the symbol fade, so a symbol whose data changes no longer flickers (#1056).
+* [`MapLibreMap.attributionEnabled`](https://maplibre.org/flutter-maplibre-gl/concepts/styles/#attribution) hides the attribution button; the attribution must then be shown elsewhere (#1092).
+* [`symbolHeightOffset`](https://maplibre.org/flutter-maplibre-gl/layers/symbol-layer/#raise-symbols-above-the-map-web) raises icons and text above the map, in meters (#1084).
+
+### Changed
+* maplibre-gl-js upgraded from 6.4.1 to 6.16.0 ([release notes](https://github.com/maplibre/maplibre-gl-js/blob/main/CHANGELOG.md)), with fewer main thread stalls. Without WebGL2 the map fails to create instead of staying blank (#1081, #1171).
+* `animateCamera` and `easeCamera` complete when the camera arrives instead of when it starts; `animateCamera` completes with `false` when interrupted (#1069, #1089).
+* `onCameraMove` and the controller's `cameraPosition` need [`trackCameraPosition: true`](https://maplibre.org/flutter-maplibre-gl/camera/camera-controls/#react-to-camera-movement), as on Android and iOS (#1126).
+* `setGeoJsonFeature` finds a feature by its top-level `id` only, as on Android and iOS (#1123).
+* [`cameraTargetBounds`](https://maplibre.org/flutter-maplibre-gl/camera/camera-bounds/#constrain-geographic-bounds) keeps the camera target inside the bounds, as on Android and iOS, so the map no longer zooms in to fit them (#793).
+* An `iconImage` naming an asset with `2.0x` or `3.0x` variants uses the file nearest the screen, like `Image.asset` (#1131).
+* A feature drag starts only after the mouse moves a little, so a click on a draggable feature stays a click (#1077).
+* Draggable features can be dragged with a finger on touch screens (#1149).
+* Feature state calls throw the errors Android and iOS throw, where MapLibre GL JS only fired an error event (#1145).
+* The offline calls, `setHttpHeaders`, `setCustomHeaders` and `getCustomHeaders` throw an `UnsupportedError` that names the call (#937, #1114, #1143).
+
+### Fixed
+* Feature ids come back as they are in the data: `"2"` no longer turns into `2`, and string ids are no longer lost (#1124).
+* Layer filters work as on Android and iOS: `setLayerFilter` no longer throws `UnimplementedError`, and `null` removes a filter (#1055).
+* `querySourceFeatures` applies its `filter` and returns Dart maps and lists instead of JS objects (#1064).
+* The feature queries return features while tiles or a source update are loading (#1076).
+* `editGeoJsonSource` and `editGeoJsonUrl` work, `setGeoJsonSource` keeps every geometry and feature id, and an invalid query filter throws `INVALID_EXPRESSION` (#1119).
+* Removing an interactive layer removes its listeners, so a layer added again fires each callback once, and a hovered one reports `leave` (#1089).
+* `setGeoJsonSource` with a Feature or a bare geometry sets that data instead of emptying the source (#1073).
+* A camera call during a fling or an animation fires `onCameraIdle` once, when the camera settles, as on Android (#1158).
+* `CameraUpdate.zoomBy` with a `focus` keeps that point fixed on screen instead of recentering on it (#1069).
+* `CameraUpdate.newLatLngBounds` keeps the current bearing instead of turning the map north up (#1090).
+* `onStyleLoadedCallback` fires once when two style loads overlap, and `addLayer` applies `filter` to fill extrusion and heatmap layers (#1088).
+* `editGeoJsonUrl` works in JavaScript builds, source urls with a space load, and tile `bounds` that cross the antimeridian load their tiles (#1123).
+* `removeFeatureState` with a `stateKey` removes only that key instead of the whole feature state (#1066).
+* `addImage` throws `INVALID_IMAGE` for bytes that are not an image, and replaces an image with the same name (#1070).
+* Changing another map option no longer moves the attribution control back to the bottom right (#1092).
+* `getLayerVisibility` answers `null` for a missing layer instead of `true` (#1068).
+* `waitUntilMapIsIdleAfterMovement` completes at once when the map is idle or disposed, and feature state calls ignore `sourceLayer` on a GeoJSON source (#1185).
+* `takeSnapshot` before the style has loaded throws `STYLE_NOT_READY`, as on Android and iOS (#1187).
+
+## [0.27.1](https://github.com/maplibre/flutter-maplibre-gl/compare/v0.27.0...v0.27.1)
+
+### Fixed
+* `setCustomHeaders` logs the header names it was given instead of their values, so an API key or an `Authorization` header no longer reaches the browser console. The call itself is still unimplemented on web and throws (#1015).
+
+## [0.27.0](https://github.com/maplibre/flutter-maplibre-gl/compare/v0.26.2...v0.27.0)
+
+### Added
+* `queryCameraPosition()` is implemented; it used to throw `UnimplementedError` (#892).
+* `updateContentInsets()` and the new `setPadding()` are implemented through the camera `padding` option; both used to throw `UnimplementedError` (#258).
+* `getLayerProperties()` and `getSourceProperties()` read a layer's or source's properties from the live style, in the same shape as Android and iOS (#513).
+* The manual location puck is drawn by the plugin, since maplibre-gl-js has no injectable location component. It reuses maplibre-gl-js' own user-location classes plus a bearing arrow, so it needs `maplibre-gl.css`. The plugin loads that with the library (#840).
+* The plugin loads maplibre-gl-js itself before the first map is built. It loads the build its interop is written against, or whatever `MapLibreMap.webLibrarySource` configures, and reuses an existing `maplibregl` global as it is. A failed stylesheet only logs, since it affects the controls and the puck, not the map. A failed import is not memoized, so the next map build retries (#928).
+* `MapLibreGlobalWeb` implements the new `MapLibreGlobalPlatform` at plugin registration, which is how `MapLibreMap.preWarm()` and `MapLibreMap.ensureWebLibraryLoaded()` get their web behaviour (#928).
+* `getClusterExpansionZoom()`, `getClusterChildren()` and `getClusterLeaves()` read a clustered GeoJSON source. maplibre-gl-js 6 returns promises from all three, where version 5 took a trailing callback, so the interop is typed as promises. The library rejects on a source that is not clustered or an unknown cluster id. `getClusterChildren()` and `getClusterLeaves()` report that as an empty list, matching Android and iOS; `getClusterExpansionZoom()` raises `CLUSTER_NOT_FOUND`, since 0 is a valid zoom and a caller could not tell it from a real answer (#896).
+* `setTrackingCameraOptions()` throws an `UnsupportedError` naming the platform, since maplibre-gl-js has no location component. `GeolocateControl` stops following the user on any programmatic camera change it did not make itself, and fires `trackuserlocationend`, which this package forwards as a tracking dismissal. Suppressing those events would report tracking that is no longer happening (#888).
+
+### Fixed
+* `getFeatureState()` returns the state instead of throwing, and reports no state as null rather than as an empty map, matching Android. It converted the JS object with `dartify()` and cast the result to `Map<String, dynamic>`, which that conversion never produces, so every call that found a state threw (#889).
+* `removeFeatureState(sourceId)` with no feature id resets the whole source. It built the target with `id: null`, and maplibre-gl-js only treats a missing id as "every feature of this source", so the call cleared nothing without an error. A `stateKey` with no `featureId` now raises the same `INVALID_ARGUMENT` as Android instead of being ignored (#889).
+* `onMapIdle` now fires, matching Android and iOS; code waiting on it never ran (#857).
+* `querySourceFeatures()` raises `STYLE_NOT_READY` when the style has not loaded yet. It used to log and answer with an empty list, which the caller cannot tell apart from a source holding no features. The two `queryRenderedFeatures` calls keep answering with an empty list, since nothing is rendered yet either way (#952).
+* `queryRenderedFeaturesInRect()` decodes the JSON string filter before handing it to maplibre-gl-js, which accepts only the expression itself. The filter was ignored, so the call answered with every feature in the rectangle (#953).
+
+### Changed
+* The pinned maplibre-gl-js build is 6.4.1. Over 6.2 it fixes a permanent frame-rate drop after a style switch, a rejected missing-image resolver taking the rest of its batch down with it, globe zoom drifting away from the pointer and globe panning stalling at the poles, and an attribute-sanitising hole in popup and marker HTML (#943).
+* MapLibre GL JS 5 replaced by 6. Version 6 ships as an ES module only, with no UMD bundle and no global of its own. The loader imports it with `importModule` and publishes the namespace as `globalThis.maplibregl`, which every `@JS` binding here addresses. `MapLibreJsSource.urls` now points at the `.mjs` build. An older non-module bundle still works: the loader keeps the global that build defines rather than publishing an empty namespace over it. A page using `MapLibreJsSource.preloaded` has to publish the global itself (#943).
+* `setGeoJsonSource()` and `setFeatureForGeoJsonSource()` complete once the data has been applied, rather than as soon as it has been handed over. Version 6 returns a promise from `GeoJSONSource.setData` where version 5 returned the source, so the promise is awaited when there is one. That also stops a rejection on invalid GeoJSON from going unhandled (#943).
+* Missing style images are supplied through `Map.setMissingStyleImageResolver` instead of a `styleimagemissing` listener. Since version 6 the listener can observe the request, but calling `addImage` from it no longer resolves it, which would have silently stopped asset images from loading. The listener is kept as a fallback when the library on the page has no resolver, so a page still providing version 5 keeps working (#943).
+* A map that comes up without a renderer now reports why through `FlutterError.reportError`, once per distinct cause. Version 6 requires WebGL2 and dropped the WebGL1 fallback. Rather than throwing like version 5, it fires an `error` from inside the constructor, too early to subscribe to, so the map would otherwise just be blank. The message tells a WebGL1 only browser apart from one with no WebGL at all, and names the version 5 build as the fix for the former (#943).
+
+## [0.26.2](https://github.com/maplibre/flutter-maplibre-gl/compare/v0.26.1...v0.26.2)
+
+No web-specific changes; version aligned with the `maplibre_gl` 0.26.2 release. See the [top-level CHANGELOG](https://github.com/maplibre/flutter-maplibre-gl/blob/main/CHANGELOG.md) for full details.
+
+## [0.26.1](https://github.com/maplibre/flutter-maplibre-gl/compare/v0.26.0...v0.26.1)
+
+No web-specific changes; version aligned with the `maplibre_gl` 0.26.1 release. See the [top-level CHANGELOG](https://github.com/maplibre/flutter-maplibre-gl/blob/main/CHANGELOG.md) for full details.
+
+## [0.26.0](https://github.com/maplibre/flutter-maplibre-gl/compare/v0.25.0...v0.26.0)
+
+### Breaking
+* Upgraded MapLibre GL JS from 4.7.1 to 5.24.0 (#761, #651).
+  * `initialCameraPosition` is now ignored if the map style contains camera properties (`center`, `zoom`, `bearing`, `pitch`). MapLibre GL JS v5 gives priority to style-defined camera values over constructor options. Use `MapLibreMapController.moveCamera()` or `MapLibreMapController.animateCamera()` after map load to override.
+  * `preserveDrawingBuffer`, `antialias`, `failIfMajorPerformanceCaveat` now set via `canvasContextAttributes` (MapLibre GL JS v5 API change).
+  * `on()`/`off()`/`once()` adapted for v5 `Subscription` return type.
+  * Removed `customAttribution` from `MapOptionsJsImpl` (moved to `AttributionControl` options in v5).
+
+### Added
+* Exposed `onMouseMove` and added feature state management (`setFeatureState`, `getFeatureState`, `removeFeatureState`) (#718).
+* Added `getLayerVisibility`, web snapshot, and map sizing features (#722).
+* Added Scale Control (#720).
+* Location engine properties support — `enableHighAccuracy`, `maximumAge`, `timeout` from `LocationEnginePlatforms.web()` passed to `GeolocateControl`'s `PositionOptions`.
+* `trackUserLocation` on `GeolocateControl` managed based on `MyLocationTrackingMode`.
+* `GeolocateControl.trigger()` called programmatically when tracking mode is enabled.
+* `easeCamera` fully implemented via MapLibre GL JS `map.easeTo({easing})`; all four `CameraAnimationInterpolation` values are honored via cubic-bezier easing callbacks. Previously threw `UnimplementedError` (#789).
+  * `easeInOut` → cubic-bezier `(0.42, 0, 0.58, 1)`
+  * `easeOut` → cubic-bezier `(0, 0, 0.58, 1)`
+  * `fastOutLinearIn` → cubic-bezier `(0.4, 0, 1, 1)` (Material Design)
+  * `linear` → identity
+  * Omitting the parameter falls through to MapLibre GL JS's built-in default curve.
+
+### Changed
+* `easeTo` wrapper on `MapLibreMap` now jsifies Dart `Map` options the same way `flyTo` already did, enabling the new `easeCamera` implementation to pass a plain Dart options dict.
+
+### Fixed
+* Improved `styleimagemissing` handling (#725).
+* Fixed JS Interop and WASM compilation in release mode (#714).
+* `removeLayer` and `removeSource` no longer throw when the layer/source doesn't exist.
+* `setGeoJsonSource` returns early instead of crashing when the source doesn't exist.
 
 ## [0.25.0](https://github.com/maplibre/flutter-maplibre-gl/compare/v0.24.1...v0.25.0) - 2026-01-07
 

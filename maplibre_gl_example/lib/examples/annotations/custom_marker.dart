@@ -1,6 +1,6 @@
+import 'dart:async' show unawaited;
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 
@@ -10,8 +10,11 @@ const randomMarkerNum = 100;
 
 class CustomMarkerPage extends ExamplePage {
   const CustomMarkerPage({super.key})
-      : super(const Icon(Icons.place), 'Custom marker',
-            category: ExampleCategory.annotations);
+    : super(
+        const Icon(Icons.place),
+        'Custom marker',
+        category: ExampleCategory.annotations,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -89,23 +92,28 @@ class CustomMarkerState extends State<CustomMarker> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(children: [
-        MapLibreMap(
-          trackCameraPosition: true,
-          onMapCreated: _onMapCreated,
-          onMapLongClick: _onMapLongClickCallback,
-          onCameraIdle: _onCameraIdleCallback,
-          onStyleLoadedCallback: _onStyleLoadedCallback,
-          initialCameraPosition:
-              const CameraPosition(target: LatLng(35.0, 135.0), zoom: 5),
-          iosLongClickDuration: const Duration(milliseconds: 200),
-        ),
-        IgnorePointer(
+      body: Stack(
+        children: [
+          MapLibreMap(
+            trackCameraPosition: true,
+            onMapCreated: _onMapCreated,
+            onMapLongClick: _onMapLongClickCallback,
+            onCameraIdle: _onCameraIdleCallback,
+            onStyleLoadedCallback: _onStyleLoadedCallback,
+            initialCameraPosition: const CameraPosition(
+              target: LatLng(35.0, 135.0),
+              zoom: 5,
+            ),
+            iosLongClickDuration: const Duration(milliseconds: 200),
+          ),
+          IgnorePointer(
             ignoring: true,
             child: Stack(
               children: _markers,
-            ))
-      ]),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           //_measurePerformance();
@@ -120,8 +128,10 @@ class CustomMarkerState extends State<CustomMarker> {
 
           await _mapController?.toScreenLocationBatch(param).then((value) {
             for (var i = 0; i < randomMarkerNum; i++) {
-              final point =
-                  Point<double>(value[i].x as double, value[i].y as double);
+              final point = Point<double>(
+                value[i].x.toDouble(),
+                value[i].y.toDouble(),
+              );
               _addMarker(point, param[i]);
             }
           });
@@ -169,8 +179,8 @@ class MarkerState extends State<Marker> with TickerProviderStateMixin {
     _controller = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
-      // ignore: discarded_futures --- IGNORE ---
-    )..repeat(reverse: true);
+    );
+    unawaited(_controller.repeat(reverse: true));
     _animation = CurvedAnimation(
       parent: _controller,
       curve: Curves.elasticOut,
@@ -179,23 +189,17 @@ class MarkerState extends State<Marker> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    var ratio = 1.0;
-
-    //web does not support Platform._operatingSystem
-    if (!kIsWeb) {
-      final isIos = defaultTargetPlatform == TargetPlatform.iOS;
-
-      // iOS returns logical pixel while Android returns screen pixel
-      ratio = isIos ? 1.0 : MediaQuery.of(context).devicePixelRatio;
-    }
-
     return Positioned(
-        left: _position.x / ratio - _iconSize / 2,
-        top: _position.y / ratio - _iconSize / 2,
-        child: RotationTransition(
-            turns: _animation,
-            child: Image.asset('assets/symbols/2.0x/custom-icon.png',
-                height: _iconSize)));
+      left: _position.x - _iconSize / 2,
+      top: _position.y - _iconSize / 2,
+      child: RotationTransition(
+        turns: _animation,
+        child: Image.asset(
+          'assets/symbols/custom-icon.png',
+          height: _iconSize,
+        ),
+      ),
+    );
   }
 
   void updatePosition(Point<num> point) {

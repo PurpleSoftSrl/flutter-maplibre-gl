@@ -1,4 +1,3 @@
-import 'dart:developer' as dev;
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -10,11 +9,11 @@ import '../../shared/shared.dart';
 /// Example demonstrating symbol layer properties
 class SymbolLayerExample extends ExamplePage {
   const SymbolLayerExample({super.key})
-      : super(
-          const Icon(Icons.place),
-          'Symbol Layer',
-          category: ExampleCategory.layers,
-        );
+    : super(
+        const Icon(Icons.place),
+        'Symbol Layer',
+        category: ExampleCategory.layers,
+      );
 
   @override
   Widget build(BuildContext context) => const _SymbolLayerBody();
@@ -86,13 +85,10 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
       );
 
       // Add GeoJSON source with points
-      await _controller!.addGeoJsonSource(
-        _sourceId,
-        {
-          'type': 'FeatureCollection',
-          'features': _generateRandomPoints(10),
-        },
-      );
+      await _controller!.addGeoJsonSource(_sourceId, {
+        'type': 'FeatureCollection',
+        'features': _generateRandomPoints(10),
+      });
 
       // Add symbol layer
       await _controller!.addSymbolLayer(
@@ -108,6 +104,9 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
           iconIgnorePlacement: _iconIgnorePlacement,
           // Text properties
           textField: '{name}',
+          // A font stack the active demo style actually serves; a glyph 404
+          // would hide the whole symbol, icon included.
+          textFont: ExampleConstants.demoFontStack,
           textSize: _textSize,
           textColor: '#${_textColor.toARGB32().toRadixString(16).substring(2)}',
           textOpacity: _textOpacity,
@@ -129,7 +128,7 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
 
       setState(() {});
     } catch (e) {
-      dev.log('Error adding symbol layer: $e');
+      debugPrint('SymbolLayerExample: Error adding symbol layer: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error adding symbol layer: $e')),
@@ -157,9 +156,7 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
     for (var i = 0; i < count; i++) {
       points.add({
         'type': 'Feature',
-        'properties': {
-          'name': cities[i % cities.length],
-        },
+        'properties': {'name': cities[i % cities.length]},
         'geometry': {
           'type': 'Point',
           'coordinates': [
@@ -189,6 +186,7 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
           iconIgnorePlacement: _iconIgnorePlacement,
           // Text properties
           textField: '{name}',
+          textFont: ExampleConstants.demoFontStack,
           textSize: _textSize,
           textColor: '#${_textColor.toARGB32().toRadixString(16).substring(2)}',
           textOpacity: _textOpacity,
@@ -208,7 +206,7 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
         ),
       );
     } catch (e) {
-      dev.log('Error updating symbol layer: $e');
+      debugPrint('SymbolLayerExample: Error updating symbol layer: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error updating symbol layer: $e')),
@@ -251,7 +249,8 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
                   ),
                   ListTile(
                     title: Text(
-                        'Icon Rotation: ${_iconRotate.toStringAsFixed(0)}°'),
+                      'Icon Rotation: ${_iconRotate.toStringAsFixed(0)}°',
+                    ),
                     subtitle: Slider(
                       value: _iconRotate,
                       min: 0.0,
@@ -265,7 +264,8 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
                   ),
                   ListTile(
                     title: Text(
-                        'Icon Offset X: ${_iconOffsetX.toStringAsFixed(1)}'),
+                      'Icon Offset X: ${_iconOffsetX.toStringAsFixed(1)}',
+                    ),
                     subtitle: Slider(
                       value: _iconOffsetX,
                       min: -3.0,
@@ -279,7 +279,8 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
                   ),
                   ListTile(
                     title: Text(
-                        'Icon Offset Y: ${_iconOffsetY.toStringAsFixed(1)}'),
+                      'Icon Offset Y: ${_iconOffsetY.toStringAsFixed(1)}',
+                    ),
                     subtitle: Slider(
                       value: _iconOffsetY,
                       min: -3.0,
@@ -342,7 +343,8 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
                   ),
                   ListTile(
                     title: Text(
-                        'Opacity: ${(_textOpacity * 100).toStringAsFixed(0)}%'),
+                      'Opacity: ${(_textOpacity * 100).toStringAsFixed(0)}%',
+                    ),
                     subtitle: Slider(
                       value: _textOpacity,
                       min: 0.0,
@@ -361,7 +363,8 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
                 children: [
                   ListTile(
                     title: Text(
-                        'Halo Width: ${_textHaloWidth.toStringAsFixed(1)}'),
+                      'Halo Width: ${_textHaloWidth.toStringAsFixed(1)}',
+                    ),
                     subtitle: Slider(
                       value: _textHaloWidth,
                       min: 0.0,
@@ -387,8 +390,9 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
                     onTap: () => _pickColor(false),
                   ),
                   ListTile(
-                    title:
-                        Text('Halo Blur: ${_textHaloBlur.toStringAsFixed(1)}'),
+                    title: Text(
+                      'Halo Blur: ${_textHaloBlur.toStringAsFixed(1)}',
+                    ),
                     subtitle: Slider(
                       value: _textHaloBlur,
                       min: 0.0,
@@ -412,20 +416,35 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
                       value: _textAnchor,
                       items: const [
                         DropdownMenuItem(
-                            value: 'center', child: Text('Center')),
+                          value: 'center',
+                          child: Text('Center'),
+                        ),
                         DropdownMenuItem(value: 'top', child: Text('Top')),
                         DropdownMenuItem(
-                            value: 'bottom', child: Text('Bottom')),
+                          value: 'bottom',
+                          child: Text('Bottom'),
+                        ),
                         DropdownMenuItem(value: 'left', child: Text('Left')),
-                        DropdownMenuItem(value: 'right', child: Text('Right')),
                         DropdownMenuItem(
-                            value: 'top-left', child: Text('Top Left')),
+                          value: 'right',
+                          child: Text('Right'),
+                        ),
                         DropdownMenuItem(
-                            value: 'top-right', child: Text('Top Right')),
+                          value: 'top-left',
+                          child: Text('Top Left'),
+                        ),
                         DropdownMenuItem(
-                            value: 'bottom-left', child: Text('Bottom Left')),
+                          value: 'top-right',
+                          child: Text('Top Right'),
+                        ),
                         DropdownMenuItem(
-                            value: 'bottom-right', child: Text('Bottom Right')),
+                          value: 'bottom-left',
+                          child: Text('Bottom Left'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'bottom-right',
+                          child: Text('Bottom Right'),
+                        ),
                       ],
                       onChanged: (value) async {
                         if (value != null) {
@@ -444,18 +463,9 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
                         const SizedBox(height: 8),
                         ExampleSegmentedButton<String>(
                           segments: const [
-                            ExampleSegment(
-                              value: 'left',
-                              label: 'Left',
-                            ),
-                            ExampleSegment(
-                              value: 'center',
-                              label: 'Center',
-                            ),
-                            ExampleSegment(
-                              value: 'right',
-                              label: 'Right',
-                            ),
+                            ExampleSegment(value: 'left', label: 'Left'),
+                            ExampleSegment(value: 'center', label: 'Center'),
+                            ExampleSegment(value: 'right', label: 'Right'),
                           ],
                           selected: _textJustify,
                           onSelectionChanged: (value) async {
@@ -467,7 +477,9 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
                     ),
                   ),
                   ListTile(
-                    title: Text('Rotation: ${_textRotate.toStringAsFixed(0)}°'),
+                    title: Text(
+                      'Rotation: ${_textRotate.toStringAsFixed(0)}°',
+                    ),
                     subtitle: Slider(
                       value: _textRotate,
                       min: 0.0,
@@ -485,8 +497,9 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
                 title: 'Text Position',
                 children: [
                   ListTile(
-                    title:
-                        Text('Offset X: ${_textOffsetX.toStringAsFixed(1)} em'),
+                    title: Text(
+                      'Offset X: ${_textOffsetX.toStringAsFixed(1)} em',
+                    ),
                     subtitle: Slider(
                       value: _textOffsetX,
                       min: -2.0,
@@ -499,8 +512,9 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
                     ),
                   ),
                   ListTile(
-                    title:
-                        Text('Offset Y: ${_textOffsetY.toStringAsFixed(1)} em'),
+                    title: Text(
+                      'Offset Y: ${_textOffsetY.toStringAsFixed(1)} em',
+                    ),
                     subtitle: Slider(
                       value: _textOffsetY,
                       min: -2.0,
@@ -553,14 +567,8 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
                         const SizedBox(height: 8),
                         ExampleSegmentedButton<String>(
                           segments: const [
-                            ExampleSegment(
-                              value: 'point',
-                              label: 'Point',
-                            ),
-                            ExampleSegment(
-                              value: 'line',
-                              label: 'Line',
-                            ),
+                            ExampleSegment(value: 'point', label: 'Point'),
+                            ExampleSegment(value: 'line', label: 'Line'),
                           ],
                           selected: _symbolPlacement,
                           onSelectionChanged: (value) async {
@@ -574,7 +582,8 @@ class _SymbolLayerBodyState extends State<_SymbolLayerBody> {
                   if (_symbolPlacement == 'line')
                     ListTile(
                       title: Text(
-                          'Symbol Spacing: ${_symbolSpacing.toStringAsFixed(0)} px'),
+                        'Symbol Spacing: ${_symbolSpacing.toStringAsFixed(0)} px',
+                      ),
                       subtitle: Slider(
                         value: _symbolSpacing,
                         min: 50.0,

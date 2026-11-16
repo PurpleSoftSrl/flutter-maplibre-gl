@@ -1,4 +1,3 @@
-import 'dart:developer' as dev;
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -10,11 +9,11 @@ import '../../shared/shared.dart';
 /// Example demonstrating fill layer properties
 class FillLayerExample extends ExamplePage {
   const FillLayerExample({super.key})
-      : super(
-          const Icon(Icons.square),
-          'Fill Layer',
-          category: ExampleCategory.layers,
-        );
+    : super(
+        const Icon(Icons.square),
+        'Fill Layer',
+        category: ExampleCategory.layers,
+      );
 
   @override
   Widget build(BuildContext context) => const _FillLayerBody();
@@ -67,9 +66,9 @@ class _FillLayerBodyState extends State<_FillLayerBody> {
         'marker-pattern',
         ExampleConstants.markerPatternPath,
       );
-      dev.log('Pattern images loaded successfully', name: 'FillLayerExample');
+      print('FillLayerExample: Pattern images loaded successfully');
     } catch (e) {
-      dev.log('Error loading pattern images: $e');
+      print('FillLayerExample: Error loading pattern images: $e');
     }
   }
 
@@ -78,13 +77,10 @@ class _FillLayerBodyState extends State<_FillLayerBody> {
 
     try {
       // Add GeoJSON source with multiple polygons
-      await _controller!.addGeoJsonSource(
-        _sourceId,
-        {
-          'type': 'FeatureCollection',
-          'features': _generateRandomPolygons(5),
-        },
-      );
+      await _controller!.addGeoJsonSource(_sourceId, {
+        'type': 'FeatureCollection',
+        'features': _generateRandomPolygons(5),
+      });
 
       // Add fill layer
       await _controller!.addFillLayer(
@@ -104,11 +100,11 @@ class _FillLayerBodyState extends State<_FillLayerBody> {
 
       setState(() {});
     } catch (e) {
-      dev.log('Error adding fill layer: $e');
+      print('FillLayerExample: Error adding fill layer: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding fill layer: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error adding fill layer: $e')));
       }
     }
   }
@@ -134,7 +130,7 @@ class _FillLayerBodyState extends State<_FillLayerBody> {
               [centerLng + size, centerLat - size],
               [centerLng - size, centerLat - size],
               [centerLng - size, centerLat + size],
-            ]
+            ],
           ],
         },
       });
@@ -161,7 +157,7 @@ class _FillLayerBodyState extends State<_FillLayerBody> {
         ),
       );
     } catch (e) {
-      dev.log('Error updating fill layer: $e');
+      print('FillLayerExample: Error updating fill layer: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error updating fill layer: $e')),
@@ -204,7 +200,8 @@ class _FillLayerBodyState extends State<_FillLayerBody> {
                   ),
                   ListTile(
                     title: Text(
-                        'Opacity: ${(_fillOpacity * 100).toStringAsFixed(0)}%'),
+                      'Opacity: ${(_fillOpacity * 100).toStringAsFixed(0)}%',
+                    ),
                     subtitle: Slider(
                       value: _fillOpacity,
                       min: 0.0,
@@ -250,7 +247,8 @@ class _FillLayerBodyState extends State<_FillLayerBody> {
                 children: [
                   ListTile(
                     title: Text(
-                        'Translate X: ${_fillTranslateX.toStringAsFixed(0)}'),
+                      'Translate X: ${_fillTranslateX.toStringAsFixed(0)}',
+                    ),
                     subtitle: Slider(
                       value: _fillTranslateX,
                       min: -50.0,
@@ -264,7 +262,8 @@ class _FillLayerBodyState extends State<_FillLayerBody> {
                   ),
                   ListTile(
                     title: Text(
-                        'Translate Y: ${_fillTranslateY.toStringAsFixed(0)}'),
+                      'Translate Y: ${_fillTranslateY.toStringAsFixed(0)}',
+                    ),
                     subtitle: Slider(
                       value: _fillTranslateY,
                       min: -50.0,
@@ -283,10 +282,12 @@ class _FillLayerBodyState extends State<_FillLayerBody> {
                       segments: const [
                         ButtonSegment(value: 'map', label: Text('Map')),
                         ButtonSegment(
-                            value: 'viewport', label: Text('Viewport')),
+                          value: 'viewport',
+                          label: Text('Viewport'),
+                        ),
                       ],
                       selected: {_fillTranslateAnchor},
-                      onSelectionChanged: (Set<String> selected) async {
+                      onSelectionChanged: (selected) async {
                         setState(() => _fillTranslateAnchor = selected.first);
                         await _updateLayer();
                       },
@@ -301,7 +302,7 @@ class _FillLayerBodyState extends State<_FillLayerBody> {
                     value: _fillPattern != null,
                     title: const Text('Fill Pattern'),
                     subtitle: Text(_fillPattern ?? 'None'),
-                    onChanged: (bool value) async {
+                    onChanged: (value) async {
                       setState(() {
                         _fillPattern = value ? 'marker-pattern' : null;
                       });

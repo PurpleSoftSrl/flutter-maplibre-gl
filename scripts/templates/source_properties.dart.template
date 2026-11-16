@@ -8,6 +8,9 @@ abstract class SourceProperties {
 }
 {{#sourceTypes}}
 
+{{#classDocSplit}}
+/// {{{part}}}
+{{/classDocSplit}}
 class {{typePascal}}SourceProperties implements SourceProperties {
   {{#properties}}
   {{#docSplit}}
@@ -27,11 +30,11 @@ class {{typePascal}}SourceProperties implements SourceProperties {
     {{/properties}}
   });
 
-  {{typePascal}}SourceProperties copyWith(
+  {{typePascal}}SourceProperties copyWith({
       {{#properties}}
       {{{type}}}? {{valueAsCamelCase}},
       {{/properties}}
-  ) {
+  }) {
     return {{typePascal}}SourceProperties(
       {{#properties}}
       {{valueAsCamelCase}}: {{valueAsCamelCase}} ?? this.{{valueAsCamelCase}},

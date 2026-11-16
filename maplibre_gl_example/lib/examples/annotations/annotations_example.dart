@@ -1,3 +1,4 @@
+import 'dart:developer' as dev;
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
@@ -8,11 +9,11 @@ import '../../shared/shared.dart';
 /// Unified example for all annotation types (symbols, circles, fills, lines)
 class AnnotationsExample extends ExamplePage {
   const AnnotationsExample({super.key})
-      : super(
-          const Icon(Icons.place),
-          'Annotations',
-          category: ExampleCategory.annotations,
-        );
+    : super(
+        const Icon(Icons.place),
+        'Annotations',
+        category: ExampleCategory.annotations,
+      );
 
   @override
   Widget build(BuildContext context) => const _AnnotationsBody();
@@ -40,6 +41,10 @@ class _AnnotationsBodyState extends State<_AnnotationsBody> {
   String? _lastTappedAnnotation;
 
   void _onMapCreated(MapLibreMapController controller) {
+    controller.onFeatureTapped.add(
+      (point, coordinates, id, layerId, annotation) =>
+          print('AnnotationsExample: Feature tapped with id $id'),
+    );
     controller.onSymbolTapped.add(_onSymbolTapped);
     controller.onCircleTapped.add(_onCircleTapped);
     controller.onFillTapped.add(_onFillTapped);
@@ -54,37 +59,52 @@ class _AnnotationsBodyState extends State<_AnnotationsBody> {
       "custom-marker",
       "assets/symbols/custom-marker.png",
     );
+
+    await _controller?.setSymbolIconAllowOverlap(true);
+    await _controller?.setSymbolTextAllowOverlap(true);
   }
 
   void _onSymbolTapped(Symbol symbol) {
     final symbolId = _symbols.entries
-        .firstWhere((entry) => entry.value == symbol,
-            orElse: () => MapEntry('', symbol))
+        .firstWhere(
+          (entry) => entry.value == symbol,
+          orElse: () => MapEntry('', symbol),
+        )
         .key;
+    dev.log('Symbol tapped: $symbolId, position ${symbol.options.geometry}');
     setState(() => _lastTappedAnnotation = 'Selected: $symbolId');
   }
 
   void _onCircleTapped(Circle circle) {
     final circleId = _circles.entries
-        .firstWhere((entry) => entry.value == circle,
-            orElse: () => MapEntry('', circle))
+        .firstWhere(
+          (entry) => entry.value == circle,
+          orElse: () => MapEntry('', circle),
+        )
         .key;
+    dev.log('Circle tapped: $circleId, position ${circle.options.geometry}');
     setState(() => _lastTappedAnnotation = 'Selected: $circleId');
   }
 
   void _onFillTapped(Fill fill) {
     final fillId = _fills.entries
-        .firstWhere((entry) => entry.value == fill,
-            orElse: () => MapEntry('', fill))
+        .firstWhere(
+          (entry) => entry.value == fill,
+          orElse: () => MapEntry('', fill),
+        )
         .key;
+    dev.log('Fill tapped: $fillId');
     setState(() => _lastTappedAnnotation = 'Fill: $fillId');
   }
 
   void _onLineTapped(Line line) {
     final lineId = _lines.entries
-        .firstWhere((entry) => entry.value == line,
-            orElse: () => MapEntry('', line))
+        .firstWhere(
+          (entry) => entry.value == line,
+          orElse: () => MapEntry('', line),
+        )
         .key;
+    dev.log('Line tapped: $lineId');
     setState(() => _lastTappedAnnotation = 'Line: $lineId');
   }
 
@@ -138,8 +158,6 @@ class _AnnotationsBodyState extends State<_AnnotationsBody> {
           ),
         );
         setState(() => _symbols['symbol_$_counter'] = symbol);
-        await _controller?.setSymbolIconAllowOverlap(true);
-        await _controller?.setSymbolTextAllowOverlap(true);
 
       case AnnotationType.circle:
         final circle = await _controller!.addCircle(
@@ -287,11 +305,6 @@ class _AnnotationsBodyState extends State<_AnnotationsBody> {
       }
     }
 
-    if (_currentType == AnnotationType.symbol) {
-      await _controller?.setSymbolIconAllowOverlap(true);
-      await _controller?.setSymbolTextAllowOverlap(true);
-    }
-
     setState(() {});
   }
 
@@ -301,8 +314,9 @@ class _AnnotationsBodyState extends State<_AnnotationsBody> {
     switch (_currentType) {
       case AnnotationType.symbol:
         if (_symbols.isEmpty) return;
-        final toRemove =
-            _symbols.values.take(count.clamp(0, _symbols.length)).toList();
+        final toRemove = _symbols.values
+            .take(count.clamp(0, _symbols.length))
+            .toList();
         final keysToRemove = _symbols.entries
             .where((e) => toRemove.contains(e.value))
             .map((e) => e.key)
@@ -314,8 +328,9 @@ class _AnnotationsBodyState extends State<_AnnotationsBody> {
 
       case AnnotationType.circle:
         if (_circles.isEmpty) return;
-        final toRemove =
-            _circles.values.take(count.clamp(0, _circles.length)).toList();
+        final toRemove = _circles.values
+            .take(count.clamp(0, _circles.length))
+            .toList();
         final keysToRemove = _circles.entries
             .where((e) => toRemove.contains(e.value))
             .map((e) => e.key)
@@ -327,8 +342,9 @@ class _AnnotationsBodyState extends State<_AnnotationsBody> {
 
       case AnnotationType.fill:
         if (_fills.isEmpty) return;
-        final toRemove =
-            _fills.values.take(count.clamp(0, _fills.length)).toList();
+        final toRemove = _fills.values
+            .take(count.clamp(0, _fills.length))
+            .toList();
         final keysToRemove = _fills.entries
             .where((e) => toRemove.contains(e.value))
             .map((e) => e.key)
@@ -340,8 +356,9 @@ class _AnnotationsBodyState extends State<_AnnotationsBody> {
 
       case AnnotationType.line:
         if (_lines.isEmpty) return;
-        final toRemove =
-            _lines.values.take(count.clamp(0, _lines.length)).toList();
+        final toRemove = _lines.values
+            .take(count.clamp(0, _lines.length))
+            .toList();
         final keysToRemove = _lines.entries
             .where((e) => toRemove.contains(e.value))
             .map((e) => e.key)
@@ -376,7 +393,7 @@ class _AnnotationsBodyState extends State<_AnnotationsBody> {
         LatLng(center.latitude - offset, center.longitude + offset),
         LatLng(center.latitude - offset, center.longitude - offset),
         LatLng(center.latitude + offset, center.longitude - offset),
-      ]
+      ],
     ];
   }
 
@@ -424,10 +441,16 @@ class _AnnotationsBodyState extends State<_AnnotationsBody> {
           zoom: 8,
         ),
         trackCameraPosition: true,
+        // As true calls onMapClick also when annotations are tapped
+        featureTapsTriggersMapClick: true,
+        onMapClick: (point, coordinates) {
+          print('AnnotationsExample: Map clicked at $coordinates');
+        },
       ),
       controls: [
         InfoCard(
-          title: _lastTappedAnnotation ??
+          title:
+              _lastTappedAnnotation ??
               '${_currentType.name.capitalize()}s on Map',
           subtitle:
               '$count annotation${count == 1 ? "" : "s"}.${_lastTappedAnnotation == null ? " Tap an annotation to select." : ""}',
@@ -446,9 +469,9 @@ class _AnnotationsBodyState extends State<_AnnotationsBody> {
                 Text(
                   'Annotation Type',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 ExampleSegmentedButton<AnnotationType>(

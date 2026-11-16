@@ -13,9 +13,10 @@ class LocationEngineFactory {
 
     fun getLocationEngine(context: Context): LocationEngine {
         if (locationEngineRequest?.priority == LocationEngineRequest.PRIORITY_HIGH_ACCURACY) {
-            return LocationEngineProxy(
-                MapLibreGPSLocationEngine(context)
-            )
+            // Google's fused provider when the build includes it and the device has Google Play
+            // Services, the platform LocationManager otherwise.
+            return FusedLocationEngineProvider.instance?.createFusedLocationEngine(context)
+                ?: LocationEngineProxy(MapLibreGPSLocationEngine(context))
         }
         return getDefaultLocationEngine(context)
     }

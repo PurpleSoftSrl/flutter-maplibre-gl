@@ -34,6 +34,17 @@ Future<void> main() async {
   final styleFilePath = '$currentPath/input/style.json';
   final styleJson = jsonDecode(await File(styleFilePath).readAsString());
 
+  // style.json is a verbatim copy of the upstream MapLibre style spec, so it
+  // also describes properties the pinned native SDKs do not implement yet.
+  // The Java/Swift templates emit a native call per property, therefore each
+  // native template only receives the properties its SDK supports (per the
+  // spec's own sdk-support metadata). The versions are parsed from the build
+  // files so upgrading the SDKs automatically unlocks newly supported
+  // properties on the next generate run.
+  final androidVersion = readAndroidSdkVersion();
+  final iosVersion = readIosSdkVersion();
+  print('Native SDK versions: android $androidVersion, ios $iosVersion');
+
   /// Layer types in the order we want to render them. Order matters for
   /// deterministic output & smaller diffs.
   final layerTypes = [
@@ -45,6 +56,8 @@ Future<void> main() async {
     "raster",
     "hillshade",
     "heatmap",
+    "color-relief",
+    "background",
   ];
 
   /// Source types. The template will convert snake_case to
@@ -55,7 +68,7 @@ Future<void> main() async {
     "raster_dem",
     "geojson",
     "video",
-    "image"
+    "image",
   ];
 
   /// Build the mustache rendering context consumed by each template.
@@ -70,6 +83,30 @@ Future<void> main() async {
           "typeCamel": ReCase(type).camelCase,
           "paint_properties": buildStyleProperties(styleJson, "paint_$type"),
           "layout_properties": buildStyleProperties(styleJson, "layout_$type"),
+          "paint_properties_android": buildStyleProperties(
+            styleJson,
+            "paint_$type",
+            platform: "android",
+            platformVersion: androidVersion,
+          ),
+          "layout_properties_android": buildStyleProperties(
+            styleJson,
+            "layout_$type",
+            platform: "android",
+            platformVersion: androidVersion,
+          ),
+          "paint_properties_ios": buildStyleProperties(
+            styleJson,
+            "paint_$type",
+            platform: "ios",
+            platformVersion: iosVersion,
+          ),
+          "layout_properties_ios": buildStyleProperties(
+            styleJson,
+            "layout_$type",
+            platform: "ios",
+            platformVersion: iosVersion,
+          ),
         },
     ],
     "sourceTypes": [
@@ -78,9 +115,17 @@ Future<void> main() async {
           "type": type.replaceAll("_", "-"),
           "typePascal": ReCase(type).pascalCase,
           "properties": buildSourceProperties(styleJson, "source_$type"),
+          "classDocSplit": [
+            for (final line in buildClassDocSplit(sourceClassDocs[type]))
+              {"part": line},
+          ],
         },
     ],
-    'expressions': buildExpressionProperties(styleJson)
+    'expressions': buildExpressionProperties(styleJson),
+    'constantKinds': [
+      for (final entry in buildConstantKinds(styleJson).entries)
+        {"name": entry.key, "kind": entry.value},
+    ],
   };
 
   // required for deduplication
@@ -88,7 +133,7 @@ Future<void> main() async {
   // template logic for shared helpers / deduplication.
   renderContext["all_layout_properties"] = <dynamic>{
     for (final type in renderContext["layerTypes"]!)
-      ...type["layout_properties"].map((p) => p["value"])
+      ...type["layout_properties"].map((p) => p["value"]),
   }.map((p) => {"property": p}).toList();
 
   // Ordered list of templates we render. If you add a new feature, append
@@ -139,9 +184,9 @@ Future<String> render(
   final outputPath = '$currentParentPath/${pathItems.join("/")}';
 
   print("Rendering $filename");
-  final templateFile =
-      await File('$currentParentPath/scripts/templates/$filename.template')
-          .readAsString();
+  final templateFile = await File(
+    '$currentParentPath/scripts/templates/$filename.template',
+  ).readAsString();
 
   final template = Template(templateFile);
   final outputFile = File('$outputPath/$filename');
@@ -151,60 +196,318 @@ Future<String> render(
   return outputFile.path;
 }
 
-/// Build the (paint/layout) style properties list for a given style.json key.
-List<Map<String, dynamic>> buildStyleProperties(
-    Map<String, dynamic> styleJson, String key) {
-  final Map<String, dynamic> items = styleJson[key];
+/// Read the MapLibre Android SDK version pinned in the plugin build.gradle.
+String readAndroidSdkVersion() {
+  final gradle = File(
+    '${Directory.current.parent.path}/maplibre_gl/android/build.gradle',
+  ).readAsStringSync();
+  final match = RegExp(
+    r"org\.maplibre\.gl:android-sdk[\w-]*:(\d+(?:\.\d+)*)",
+  ).firstMatch(gradle);
+  if (match == null) {
+    throw StateError(
+      'Could not find the MapLibre Android SDK version in build.gradle',
+    );
+  }
+  return match.group(1)!;
+}
 
-  return items.entries.map((e) => buildStyleProperty(e.key, e.value)).toList();
+/// Read the MapLibre iOS SDK version pinned in the plugin podspec.
+String readIosSdkVersion() {
+  final podspec = File(
+    '${Directory.current.parent.path}/maplibre_gl/ios/maplibre_gl.podspec',
+  ).readAsStringSync();
+  final match = RegExp(
+    r"s\.dependency\s+'MapLibre',\s+'(\d+(?:\.\d+)*)'",
+  ).firstMatch(podspec);
+  if (match == null) {
+    throw StateError(
+      'Could not find the MapLibre iOS SDK version in maplibre_gl.podspec',
+    );
+  }
+  return match.group(1)!;
+}
+
+/// Compare two dotted version strings ("13.4.1"). Returns a negative value
+/// if [a] < [b], zero if equal, positive if [a] > [b].
+int compareVersions(String a, String b) {
+  final pa = a.split('.').map(int.parse).toList();
+  final pb = b.split('.').map(int.parse).toList();
+  for (var i = 0; i < pa.length || i < pb.length; i++) {
+    final va = i < pa.length ? pa[i] : 0;
+    final vb = i < pb.length ? pb[i] : 0;
+    if (va != vb) return va - vb;
+  }
+  return 0;
+}
+
+/// In sdk-support metadata a version number means "supported since", while
+/// an issue URL or "wontfix" means "not implemented on this platform".
+bool isImplemented(Object? sdkSupportValue) =>
+    RegExp(r'^\d+(\.\d+)*$').hasMatch('$sdkSupportValue');
+
+/// Platforms the spec credits with a property their SDK does not expose,
+/// keyed by the property name in the spec. Only the generated docs are
+/// corrected, so this is for source properties, which every platform shares
+/// one class for; a layer property would also have to be gated out of the
+/// native converters.
+///
+/// `volatile` records ios since 5.10.0, which is a Mapbox iOS version. The
+/// MapLibre iOS SDK has no equivalent of Android's `Source.setVolatile`, so an
+/// app that trusts the doc gets tiles cached to disk with nothing to warn it.
+const unsupportedPlatformOverrides = {
+  "volatile": {"ios"},
+};
+
+/// Whether the native SDK at [platformVersion] supports a property, based on
+/// the spec's sdk-support metadata.
+/// Properties without sdk-support info are treated as supported: they predate
+/// the metadata, and if that assumption is ever wrong the generated native
+/// code fails to compile loudly instead of silently dropping the property.
+bool isSupportedOnPlatform(
+  Map<String, dynamic> propertySpec,
+  String platform,
+  String platformVersion,
+) {
+  final Map<String, dynamic>? support =
+      propertySpec["sdk-support"]?["basic functionality"];
+  if (support == null) return true;
+  final since = support[platform];
+  if (since == null || !isImplemented(since)) return false;
+  return compareVersions(platformVersion, '$since') >= 0;
+}
+
+/// Build the (paint/layout) style properties list for a given style.json key.
+/// When [platform] is given, properties the native SDK at [platformVersion]
+/// does not support are omitted.
+List<Map<String, dynamic>> buildStyleProperties(
+  Map<String, dynamic> styleJson,
+  String key, {
+  String? platform,
+  String? platformVersion,
+}) {
+  final Map<String, dynamic> items = styleJson[key] ?? <String, dynamic>{};
+
+  final properties = items.entries
+      .where(
+        (e) =>
+            platform == null ||
+            isSupportedOnPlatform(e.value, platform, platformVersion!),
+      )
+      .map((e) => buildStyleProperty(e.key, e.value))
+      .toList();
+
+  // Only the paint branch of the native templates wraps a single value into the
+  // array the SDK expects. No layout property is array-typed in the spec today,
+  // so rather than carrying a second copy of that logic, stop here if one ever
+  // appears: the wrap has to be added to the layout branch first, or the value
+  // would reach the native SDK unwrapped and be rejected at runtime.
+  if (key.startsWith("layout_")) {
+    for (final property in properties) {
+      if (property['isColorArrayProperty'] == true ||
+          property['isNumberArrayProperty'] == true) {
+        throw StateError(
+          'The layout property $key.${property['value']} is array-typed, which '
+          'the Java and Swift layout templates do not wrap yet. Add the '
+          'colorArray/numberArray handling to the layout section of '
+          'scripts/templates/LayerPropertyConverter.{java,swift}.template.',
+        );
+      }
+    }
+  }
+
+  return properties;
 }
 
 /// Translate a single raw style property spec into a template-ready map.
 Map<String, dynamic> buildStyleProperty(
-    String key, Map<String, dynamic> value) {
+  String key,
+  Map<String, dynamic> value,
+) {
   final typeDart = dartTypeMappingTable[value["type"]];
-  final nestedTypeDart = dartTypeMappingTable[value["value"]] ??
+  final nestedTypeDart =
+      dartTypeMappingTable[value["value"]] ??
       dartTypeMappingTable[value["value"]?["type"]];
   final camelCase = ReCase(key).camelCase;
+
+  // Multidirectional hillshading turned some properties into array types
+  // (MapLibre Native 6.24.0 / Android 13.0.0), which the spec marks with the
+  // colorArray and numberArray types. A single value coming from the Dart API
+  // has to be wrapped in an array before it reaches the native SDK.
+  final isColorArrayProperty = value["type"] == "colorArray";
+  final isNumberArrayProperty = value["type"] == "numberArray";
+  var iosExpression = 'expression';
+  if (isColorArrayProperty) {
+    iosExpression = 'wrapColorAsArray(expression)';
+  } else if (isNumberArrayProperty) {
+    iosExpression = 'wrapValueAsArray(expression)';
+  }
 
   return <String, dynamic>{
     'value': key,
     'isFloatArrayProperty': typeDart == "List" && nestedTypeDart == "double",
+    'isColorArrayProperty': isColorArrayProperty,
+    'isNumberArrayProperty': isNumberArrayProperty,
     'isVisibilityProperty': key == "visibility",
     'isPatternProperty': key.endsWith("-pattern"),
-    'requiresLiteral': key == "icon-image",
+    'requiresLiteral': key == "icon-image" || key == "text-field",
+    'isFontProperty': key == "text-font",
     'isIosAsCamelCase': renamedIosProperties.containsKey(camelCase),
     'iosAsCamelCase': renamedIosProperties[camelCase],
+    'iosName': renamedIosProperties[camelCase] ?? camelCase,
+    'iosExpression': iosExpression,
     'doc': value["doc"],
-    'docSplit': buildDocSplit(value).map((s) => {"part": s}).toList(),
-    'valueAsCamelCase': camelCase
+    'docSplit': buildDocSplit(
+      value,
+      name: key,
+    ).map((s) => {"part": s}).toList(),
+    'valueAsCamelCase': camelCase,
+    'valueAsPascalCase': ReCase(key).pascalCase,
   };
 }
 
+/// Class docs of the source properties, one paragraph per entry.
+const Map<String, List<String>> sourceClassDocs = {
+  "video": [_videoSourceDoc, _videoSourceSupport],
+  "image": [_imageSourceDoc],
+};
+
+const _videoSourceDoc = "A video drawn over four corners of the map.";
+
+const _videoSourceSupport =
+    "**Platform support**: web only. On Android and iOS "
+    "`MapLibreMapController.addSource` throws `UNSUPPORTED_SOURCE_TYPE`.";
+
+const _imageSourceDoc =
+    "An image drawn from a url over four corners of the map. For image bytes, "
+    "use `MapLibreMapController.addImageSource`.";
+
+/// The lines of the doc of a source property class, from [paragraphs], or no
+/// lines without any.
+List<String> buildClassDocSplit(List<String>? paragraphs) => [
+  for (final (i, paragraph) in (paragraphs ?? const <String>[]).indexed) ...[
+    if (i > 0) "",
+    ...splitIntoChunks(paragraph, 76),
+  ],
+];
+
+/// The kind of constant each layer property takes, by name, for the Swift
+/// converter, which checks constants MapLibre on iOS does not: `number`,
+/// `boolean`, `string`, `color`, `enum:` with its values joined by `|`, or
+/// `array:`, the length (`*` for any) and the kind of its items. Kinds that
+/// are not checked are left out.
+Map<String, String> buildConstantKinds(Map<String, dynamic> styleJson) {
+  final kinds = <String, String>{};
+  for (final section in styleJson.entries) {
+    if (!section.key.startsWith('paint_') &&
+        !section.key.startsWith('layout_')) {
+      continue;
+    }
+    for (final property in (section.value as Map<String, dynamic>).entries) {
+      final kind = constantKind(property.value as Map<String, dynamic>);
+      if (kind != null) kinds[property.key] = kind;
+    }
+  }
+  return Map.fromEntries(
+    kinds.entries.toList()..sort((a, b) => a.key.compareTo(b.key)),
+  );
+}
+
+/// The kind of constant a property of [spec] takes. See [buildConstantKinds].
+String? constantKind(Map<String, dynamic> spec) {
+  String? itemKind(Object? type) => switch (type) {
+    'number' => 'number',
+    'boolean' => 'boolean',
+    'string' || 'resolvedImage' => 'string',
+    'color' => 'color',
+    'enum' => 'enum:${(spec['values'] as Map).keys.join('|')}',
+    _ => null,
+  };
+  if (spec['type'] != 'array') return itemKind(spec['type']);
+  final value = spec['value'];
+  final item = itemKind(value is Map ? value['type'] : value);
+  if (item == null) return null;
+  return 'array:${spec['length'] ?? '*'}:$item';
+}
+
+/// Source property docs that replace the spec's, by spec section and
+/// property. The spec makes the url of an image source optional, but
+/// MapLibre Native cannot build one without it.
+const sourcePropertyDocOverrides = {
+  "source_image": {
+    "url":
+        "URL that points to an image. Required: `addSource` throws "
+        "`INVALID_ARGUMENT` without it.",
+    "coordinates":
+        "Corners of the image as [longitude, latitude]: top left, top right, "
+        "bottom right, bottom left. Required: `addSource` throws "
+        "`INVALID_ARGUMENT` without four valid corners.",
+  },
+};
+
 /// Build the list of source properties (excluding generic wildcard entries).
 List<Map<String, dynamic>> buildSourceProperties(
-    Map<String, dynamic> styleJson, String key) {
+  Map<String, dynamic> styleJson,
+  String key,
+) {
   final Map<String, dynamic> items = styleJson[key];
+  final overrides = sourcePropertyDocOverrides[key] ?? const {};
 
   return items.entries
       .where((e) => e.key != "*" && e.key != "type")
-      .map((e) => buildSourceProperty(e.key, e.value))
+      .where((e) => isImplementedSomewhere(e.value as Map<String, dynamic>))
+      .map(
+        (e) => buildSourceProperty(e.key, {
+          ...e.value as Map<String, dynamic>,
+          "doc": ?overrides[e.key],
+        }),
+      )
       .toList();
 }
+
+/// Whether any platform implements the property [spec] describes, or the spec
+/// says nothing about it. A source property no platform implements is left
+/// out: its spec default would go out with every source, and MapLibre GL JS
+/// rejects a source with a key its own copy of the spec does not know.
+bool isImplementedSomewhere(Map<String, dynamic> spec) {
+  final Map<String, dynamic>? sdkSupport = spec["sdk-support"];
+  if (sdkSupport == null) return true;
+  return sdkSupport.values.any(
+    (kind) => (kind as Map<String, dynamic>).values.any(isImplemented),
+  );
+}
+
+/// Source properties that are only valid under another property's setting
+/// (the raster-dem custom-encoding factors require `encoding: "custom"`).
+/// Their spec defaults must not become Dart constructor defaults: MapLibre
+/// GL JS validates the source JSON and rejects these keys when the encoding
+/// does not allow them, so they may only be serialized when set explicitly.
+const conditionalSourceProperties = {
+  "redFactor",
+  "greenFactor",
+  "blueFactor",
+  "baseShift",
+};
 
 /// Translate one source property spec to a template map, including default
 /// value normalization (prefixing const for literal lists, quoting strings).
 Map<String, dynamic> buildSourceProperty(
-    String key, Map<String, dynamic> value) {
+  String key,
+  Map<String, dynamic> value,
+) {
   final camelCase = ReCase(key).camelCase;
   final typeDart = dartTypeMappingTable[value["type"]];
   final typeSwift = swiftTypeMappingTable[value["type"]];
-  final nestedTypeDart = dartTypeMappingTable[value["value"]] ??
+  final nestedTypeDart =
+      dartTypeMappingTable[value["value"]] ??
       dartTypeMappingTable[value["value"]?["type"]];
-  final nestedTypeSwift = swiftTypeMappingTable[value["value"]] ??
+  final nestedTypeSwift =
+      swiftTypeMappingTable[value["value"]] ??
       swiftTypeMappingTable[value["value"]?["type"]];
 
-  var defaultValue = value["default"];
+  var defaultValue = conditionalSourceProperties.contains(key)
+      ? null
+      : value["default"];
   if (defaultValue is List) {
     defaultValue = "const$defaultValue";
   } else if (defaultValue is String) {
@@ -215,18 +518,23 @@ Map<String, dynamic> buildSourceProperty(
     'value': key,
     'doc': value["doc"],
     'default': defaultValue,
-    'hasDefault': value["default"] != null,
+    'hasDefault': defaultValue != null,
     'type': nestedTypeDart == null ? typeDart : "$typeDart<$nestedTypeDart>",
-    'typeSwift':
-        nestedTypeSwift == null ? typeSwift : "$typeSwift<$nestedTypeSwift>",
-    'docSplit': buildDocSplit(value).map((s) => {"part": s}).toList(),
-    'valueAsCamelCase': camelCase
+    'typeSwift': nestedTypeSwift == null
+        ? typeSwift
+        : "$typeSwift<$nestedTypeSwift>",
+    'docSplit': buildDocSplit(
+      value,
+      name: key,
+    ).map((s) => {"part": s}).toList(),
+    'valueAsCamelCase': camelCase,
   };
 }
 
 /// Produce a wrapped documentation block (array of lines) including
-/// type/default/constraints plus enumerated option docs.
-List<String> buildDocSplit(Map<String, dynamic> item) {
+/// type/default/constraints plus enumerated option docs. [name] is the
+/// property name in the spec, used to look up [unsupportedPlatformOverrides].
+List<String> buildDocSplit(Map<String, dynamic> item, {String? name}) {
   final defaultValue = item["default"];
   final maxValue = item["maximum"];
   final minValue = item["minimum"];
@@ -234,7 +542,7 @@ List<String> buildDocSplit(Map<String, dynamic> item) {
   final Map<dynamic, dynamic>? sdkSupport = item["sdk-support"];
 
   final Map<String, dynamic>? values = item["values"];
-  final result = splitIntoChunks(item["doc"]!, 70);
+  final result = splitIntoChunks(specDoc(item["doc"]!), 70);
   if (type != null) {
     result.add("");
     result.add("Type: $type");
@@ -246,52 +554,101 @@ List<String> buildDocSplit(Map<String, dynamic> item) {
       for (final value in values.entries) {
         result.add('  "${value.key}"');
         result.addAll(
-            splitIntoChunks("${value.value["doc"]}", 70, prefix: "     "));
+          splitIntoChunks(
+            specDoc("${value.value["doc"]}"),
+            70,
+            prefix: "     ",
+          ),
+        );
       }
     }
   }
-  if (sdkSupport != null) {
-    final Map<String, dynamic>? basic = sdkSupport["basic functionality"];
-    final Map<String, dynamic>? dataDriven = sdkSupport["data-driven styling"];
-
+  final support = [
+    ...buildSupportLines("basic functionality", sdkSupport, name),
+    ...buildSupportLines("data-driven styling", sdkSupport, name),
+  ];
+  if (support.isNotEmpty) {
     result.add("");
     result.add("Sdk Support:");
-    if (basic != null && basic.isNotEmpty) {
-      result.add("  basic functionality with ${basic.keys.join(", ")}");
-    }
-    if (dataDriven != null && dataDriven.isNotEmpty) {
-      result.add("  data-driven styling with ${dataDriven.keys.join(", ")}");
-    }
+    result.addAll(support);
   }
 
   return result;
 }
 
-/// Simple greedy word-wrapping utility used for docs.
-List<String> splitIntoChunks(String input, int lineLength,
-    {String prefix = ""}) {
-  final words = input.split(" ");
-  final chunks = <String>[];
+/// The doc line for one sdk-support entry, naming the platforms that implement
+/// it and the ones that do not. Both belong in the docs: a platform the spec
+/// records with an issue URL instead of a version accepts the property and
+/// silently ignores it, which is worth saying out loud.
+List<String> buildSupportLines(
+  String kind,
+  Map<dynamic, dynamic>? sdkSupport, [
+  String? name,
+]) {
+  final Map<String, dynamic>? support = sdkSupport?[kind];
+  if (support == null || support.isEmpty) return [];
 
-  var chunk = "";
-  for (final word in words) {
-    final nextChunk = chunk.isEmpty ? prefix + word : "$chunk $word";
-    if (nextChunk.length > lineLength || chunk.endsWith("\n")) {
-      chunks.add(chunk.replaceAll("\n", ""));
-      chunk = prefix + word;
-    } else {
-      chunk = nextChunk;
-    }
+  final overridden = unsupportedPlatformOverrides[name] ?? const <String>{};
+  bool implementsIt(String platform) =>
+      isImplemented(support[platform]) && !overridden.contains(platform);
+
+  final implemented = support.keys.where(implementsIt);
+  final missing = support.keys.where((p) => !implementsIt(p));
+  if (implemented.isEmpty) {
+    return ["  $kind on no platform yet"];
   }
-  chunks.add(chunk);
+  final not = missing.isEmpty ? "" : " (not on ${missing.join(", ")})";
+  return ["  $kind with ${implemented.join(", ")}$not"];
+}
 
-  return chunks;
+/// Where the links the spec writes relative to its own site point.
+const styleSpecUrl = "https://maplibre.org/maplibre-style-spec/";
+
+/// A doc from the spec, ready for a dartdoc: images are dropped, since their
+/// assets live on the spec site, and links relative to that site are made
+/// absolute. Links to an anchor (`#image`) are kept as they are.
+String specDoc(String doc) => doc
+    .replaceAll(RegExp(r"\s*!\[[^\]]*\]\([^)]*\)"), "")
+    .replaceAllMapped(
+      RegExp(r"\]\((?!https?:|#)([^)]*)\)"),
+      (m) => "]($styleSpecUrl${m[1]})",
+    );
+
+/// Simple greedy word-wrapping utility used for docs. Each line of [input] is
+/// wrapped on its own, and blank lines, which separate paragraphs and lists in
+/// the spec, are kept as one empty line.
+List<String> splitIntoChunks(
+  String input,
+  int lineLength, {
+  String prefix = "",
+}) {
+  final chunks = <String>[];
+  for (final line in input.split("\n").map((l) => l.trim())) {
+    if (line.isEmpty) {
+      if (chunks.isNotEmpty && chunks.last.isNotEmpty) chunks.add("");
+      continue;
+    }
+    var chunk = "";
+    for (final word in line.split(" ").where((w) => w.isNotEmpty)) {
+      final nextChunk = chunk.isEmpty ? prefix + word : "$chunk $word";
+      if (nextChunk.length > lineLength && chunk.isNotEmpty) {
+        chunks.add(chunk);
+        chunk = prefix + word;
+      } else {
+        chunk = nextChunk;
+      }
+    }
+    chunks.add(chunk);
+  }
+  if (chunks.isNotEmpty && chunks.last.isEmpty) chunks.removeLast();
+  return chunks.isEmpty ? [prefix] : chunks;
 }
 
 /// Build expression metadata (renaming reserved or symbolic operators to
 /// valid method-like identifiers for Dart code generation).
 List<Map<String, dynamic>> buildExpressionProperties(
-    Map<String, dynamic> styleJson) {
+  Map<String, dynamic> styleJson,
+) {
   final Map<String, dynamic> items = styleJson["expression_name"]["values"];
 
   final renamed = {
@@ -302,7 +659,7 @@ List<Map<String, dynamic>> buildExpressionProperties(
     "+": "plus",
     "*": "multiply",
     "-": "minus",
-    "%": "precent",
+    "%": "modulo",
     ">": "larger",
     ">=": "largerOrEqual",
     "<": "smaller",
@@ -310,16 +667,30 @@ List<Map<String, dynamic>> buildExpressionProperties(
     "!=": "notEqual",
     "==": "equal",
     "/": "divide",
-    "^": "xor",
+    "^": "power",
     "!": "not",
   };
 
-  return items.entries
-      .map((e) => <String, dynamic>{
-            'value': e.key,
-            'doc': e.value["doc"],
-            'docSplit': buildDocSplit(e.value).map((s) => {"part": s}).toList(),
-            'valueAsCamelCase': ReCase(renamed[e.key] ?? e.key).camelCase
-          })
-      .toList();
+  /// Names that shipped for an operator before it was named after what it
+  /// actually does. Kept as deprecated aliases so existing code still compiles.
+  const deprecated = {
+    "modulo": ("precent", '"%" is the remainder operator'),
+    "power": ("xor", '"^" raises the first input to the power of the second'),
+  };
+
+  return items.entries.map((e) {
+    final name = ReCase(renamed[e.key] ?? e.key).camelCase;
+    final alias = deprecated[name];
+    return <String, dynamic>{
+      'value': e.key,
+      'doc': e.value["doc"],
+      'docSplit': buildDocSplit(
+        e.value,
+        name: e.key,
+      ).map((s) => {"part": s}).toList(),
+      'valueAsCamelCase': name,
+      'deprecatedName': alias?.$1,
+      'deprecationReason': alias?.$2,
+    };
+  }).toList();
 }

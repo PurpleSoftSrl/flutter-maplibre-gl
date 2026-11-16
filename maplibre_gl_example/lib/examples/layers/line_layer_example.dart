@@ -1,4 +1,3 @@
-import 'dart:developer' as dev;
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -10,11 +9,11 @@ import '../../shared/shared.dart';
 /// Example demonstrating line layer properties
 class LineLayerExample extends ExamplePage {
   const LineLayerExample({super.key})
-      : super(
-          const Icon(Icons.timeline),
-          'Line Layer',
-          category: ExampleCategory.layers,
-        );
+    : super(
+        const Icon(Icons.timeline),
+        'Line Layer',
+        category: ExampleCategory.layers,
+      );
 
   @override
   Widget build(BuildContext context) => const _LineLayerBody();
@@ -62,13 +61,10 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
     await _loadPatternImages();
 
     // Add GeoJSON source with multiple lines
-    await _controller!.addGeoJsonSource(
-      _sourceId,
-      {
-        'type': 'FeatureCollection',
-        'features': _generateRandomLines(5),
-      },
-    );
+    await _controller!.addGeoJsonSource(_sourceId, {
+      'type': 'FeatureCollection',
+      'features': _generateRandomLines(5),
+    });
     await _addLineLayer();
   }
 
@@ -83,7 +79,7 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
         ExampleConstants.markerPatternPath,
       );
     } catch (e) {
-      dev.log('Error loading pattern images: $e');
+      print('LineLayerExample: Error loading pattern images: $e');
     }
   }
 
@@ -114,11 +110,11 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
 
       setState(() {});
     } catch (e) {
-      dev.log('Error adding line layer: $e');
+      print('LineLayerExample: Error adding line layer: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error adding line layer: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error adding line layer: $e')));
       }
     }
   }
@@ -143,10 +139,7 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
       lines.add({
         'type': 'Feature',
         'properties': {},
-        'geometry': {
-          'type': 'LineString',
-          'coordinates': coordinates,
-        },
+        'geometry': {'type': 'LineString', 'coordinates': coordinates},
       });
     }
 
@@ -176,11 +169,11 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
         ),
       );
     } catch (e) {
-      dev.log('Error updating line layer: $e');
+      print('LineLayerExample: Error updating line layer: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating layer: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating layer: $e')));
       }
     }
   }
@@ -245,7 +238,8 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
                   ),
                   ListTile(
                     title: Text(
-                        'Opacity: ${(_lineOpacity * 100).toStringAsFixed(0)}%'),
+                      'Opacity: ${(_lineOpacity * 100).toStringAsFixed(0)}%',
+                    ),
                     subtitle: Slider(
                       value: _lineOpacity,
                       min: 0.0,
@@ -271,18 +265,9 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
                         const SizedBox(height: 8),
                         ExampleSegmentedButton<String>(
                           segments: const [
-                            ExampleSegment(
-                              value: 'butt',
-                              label: 'Butt',
-                            ),
-                            ExampleSegment(
-                              value: 'round',
-                              label: 'Round',
-                            ),
-                            ExampleSegment(
-                              value: 'square',
-                              label: 'Square',
-                            ),
+                            ExampleSegment(value: 'butt', label: 'Butt'),
+                            ExampleSegment(value: 'round', label: 'Round'),
+                            ExampleSegment(value: 'square', label: 'Square'),
                           ],
                           selected: _lineCap,
                           onSelectionChanged: (value) async {
@@ -302,18 +287,9 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
                         const SizedBox(height: 8),
                         ExampleSegmentedButton<String>(
                           segments: const [
-                            ExampleSegment(
-                              value: 'bevel',
-                              label: 'Bevel',
-                            ),
-                            ExampleSegment(
-                              value: 'round',
-                              label: 'Round',
-                            ),
-                            ExampleSegment(
-                              value: 'miter',
-                              label: 'Miter',
-                            ),
+                            ExampleSegment(value: 'bevel', label: 'Bevel'),
+                            ExampleSegment(value: 'round', label: 'Round'),
+                            ExampleSegment(value: 'miter', label: 'Miter'),
                           ],
                           selected: _lineJoin,
                           onSelectionChanged: (value) async {
@@ -327,7 +303,8 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
                   if (_lineJoin == 'miter')
                     ListTile(
                       title: Text(
-                          'Miter Limit: ${_lineMiterLimit.toStringAsFixed(1)}'),
+                        'Miter Limit: ${_lineMiterLimit.toStringAsFixed(1)}',
+                      ),
                       subtitle: const Text('Sharp corner threshold'),
                       trailing: SizedBox(
                         width: 200,
@@ -346,7 +323,8 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
                   if (_lineJoin == 'round')
                     ListTile(
                       title: Text(
-                          'Round Limit: ${_lineRoundLimit.toStringAsFixed(2)}'),
+                        'Round Limit: ${_lineRoundLimit.toStringAsFixed(2)}',
+                      ),
                       subtitle: const Text('Round corner threshold'),
                       trailing: SizedBox(
                         width: 200,
@@ -368,8 +346,9 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
                 title: 'Line Layout',
                 children: [
                   ListTile(
-                    title:
-                        Text('Gap Width: ${_lineGapWidth.toStringAsFixed(1)}'),
+                    title: Text(
+                      'Gap Width: ${_lineGapWidth.toStringAsFixed(1)}',
+                    ),
                     subtitle: const Text('Space between parallel lines'),
                     trailing: SizedBox(
                       width: 200,
@@ -409,7 +388,8 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
                 children: [
                   ListTile(
                     title: Text(
-                        'Translate X: ${_lineTranslateX.toStringAsFixed(0)}'),
+                      'Translate X: ${_lineTranslateX.toStringAsFixed(0)}',
+                    ),
                     subtitle: Slider(
                       value: _lineTranslateX,
                       min: -50.0,
@@ -423,7 +403,8 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
                   ),
                   ListTile(
                     title: Text(
-                        'Translate Y: ${_lineTranslateY.toStringAsFixed(0)}'),
+                      'Translate Y: ${_lineTranslateY.toStringAsFixed(0)}',
+                    ),
                     subtitle: Slider(
                       value: _lineTranslateY,
                       min: -50.0,
@@ -444,7 +425,7 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
                     value: _linePattern != null,
                     title: const Text('Line Pattern'),
                     subtitle: Text(_linePattern ?? 'None'),
-                    onChanged: (bool value) async {
+                    onChanged: (value) async {
                       setState(() {
                         _linePattern = value ? 'marker-pattern' : null;
                       });
@@ -579,7 +560,6 @@ class _LineLayerBodyState extends State<_LineLayerBody> {
 
     // Only update if a selection was made (not cancelled)
     if (result != null && result is _LineDashStyle) {
-      dev.log('Selected dash style: ${result.label}');
       setState(() => _lineDasharray = result);
       await _updateLayer();
     }
