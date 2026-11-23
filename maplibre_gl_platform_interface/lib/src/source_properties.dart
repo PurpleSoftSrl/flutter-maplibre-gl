@@ -836,10 +836,7 @@ class VideoSourceProperties implements SourceProperties {
   /// Type: array
   final List<List>? coordinates;
 
-  const VideoSourceProperties({
-    this.urls,
-    this.coordinates,
-  });
+  const VideoSourceProperties({this.urls, this.coordinates});
 
   VideoSourceProperties copyWith({
     List<String>? urls,
@@ -891,15 +888,9 @@ class ImageSourceProperties implements SourceProperties {
   /// Type: array
   final List<List>? coordinates;
 
-  const ImageSourceProperties({
-    this.url,
-    this.coordinates,
-  });
+  const ImageSourceProperties({this.url, this.coordinates});
 
-  ImageSourceProperties copyWith({
-    String? url,
-    List<List>? coordinates,
-  }) {
+  ImageSourceProperties copyWith({String? url, List<List>? coordinates}) {
     return ImageSourceProperties(
       url: url ?? this.url,
       coordinates: coordinates ?? this.coordinates,
